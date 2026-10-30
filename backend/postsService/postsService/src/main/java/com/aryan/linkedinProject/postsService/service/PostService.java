@@ -6,6 +6,9 @@ import java.util.stream.Collectors;
 import org.modelmapper.ModelMapper;
 import org.springframework.stereotype.Service;
 
+import com.aryan.linkedinProject.postsService.auth.AuthContextHolder;
+import com.aryan.linkedinProject.postsService.client.ConnectionsServiceClient;
+import com.aryan.linkedinProject.postsService.dto.PersonDto;
 import com.aryan.linkedinProject.postsService.dto.PostCreateRequestDto;
 import com.aryan.linkedinProject.postsService.dto.PostDto;
 import com.aryan.linkedinProject.postsService.entity.Post;
@@ -22,9 +25,12 @@ public class PostService {
 
     private final PostRepository postRepository;
     private final ModelMapper modelMapper;
+    private final ConnectionsServiceClient connectionsServiceClient;
 
     public PostDto createPost(PostCreateRequestDto postCreateRequestDto, Long userId) {
         log.info("creating post for user with id: {}", userId);
+
+        
         Post post = modelMapper.map(postCreateRequestDto, Post.class);
         post.setUserId(userId);
         post = postRepository.save(post);
@@ -32,6 +38,15 @@ public class PostService {
     }
 
     public PostDto getPostById(Long postId) {
+
+        Long userId = AuthContextHolder.getCurrentUserId();
+
+        // TODO: Remove in future
+        // Call the connection service from the posts service and pass the userid in the headers.
+
+
+        List<PersonDto> personDtoList = connectionsServiceClient.getFirstDegreeConnections(userId);
+
         Post post = postRepository.findById(postId).orElseThrow(() -> new ResourceNotFoundException("Post not found with ID: "+postId));
         return modelMapper.map(post, PostDto.class);
     }
