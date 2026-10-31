@@ -1,12 +1,14 @@
 package com.aryan.linkedinProject.userService.service;
 
 import org.modelmapper.ModelMapper;
+import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.stereotype.Service;
 
 import com.aryan.linkedinProject.userService.dto.LoginRequestDto;
 import com.aryan.linkedinProject.userService.dto.SignupRequestDto;
 import com.aryan.linkedinProject.userService.dto.UserDto;
 import com.aryan.linkedinProject.userService.entity.User;
+import com.aryan.linkedinProject.userService.event.UserCreatedEvent;
 import com.aryan.linkedinProject.userService.exception.BadRequestException;
 import com.aryan.linkedinProject.userService.repository.UserRepository;
 import com.aryan.linkedinProject.userService.utils.BCrypt;
@@ -22,6 +24,7 @@ public class AuthService {
     private final UserRepository userRepository;
     private final ModelMapper modelMapper;
     private final JwtService jwtService;
+    private final KafkaTemplate<Long, UserCreatedEvent> userCreatedEventKafkaTemplate;
 
     public UserDto signUp(SignupRequestDto signupRequestDto) {
         log.info("SignUp a user with email : {}", signupRequestDto.getEmail());
@@ -35,6 +38,15 @@ public class AuthService {
         user.setPassword(BCrypt.hash(signupRequestDto.getPassword()));
 
         user = userRepository.save(user);
+
+        UserCreatedEvent userCreatedEvent = UserCreatedEvent.builder()
+                .userId(user.getId())
+                .name(user.getName())
+                .build();
+
+        userCreatedEventKafkaTemplate.send("user_created_topic", userCreatedEvent);
+
+
         return modelMapper.map(user, UserDto.class);
         
     }
