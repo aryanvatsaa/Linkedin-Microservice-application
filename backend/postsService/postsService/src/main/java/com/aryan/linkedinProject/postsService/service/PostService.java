@@ -4,10 +4,14 @@ import java.util.List;
 import java.util.stream.Collectors;
 
 import org.modelmapper.ModelMapper;
+import org.springframework.http.ResponseEntity;
 import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.stereotype.Service;
+import org.springframework.web.multipart.MultipartFile;
 
+import com.aryan.linkedinProject.postsService.auth.AuthContextHolder;
 import com.aryan.linkedinProject.postsService.client.ConnectionsServiceClient;
+import com.aryan.linkedinProject.postsService.client.UploaderServiceClient;
 import com.aryan.linkedinProject.postsService.dto.PersonDto;
 import com.aryan.linkedinProject.postsService.dto.PostCreateRequestDto;
 import com.aryan.linkedinProject.postsService.dto.PostDto;
@@ -28,13 +32,17 @@ public class PostService {
     private final ModelMapper modelMapper;
     private final ConnectionsServiceClient connectionsServiceClient;
     private final KafkaTemplate<Long, PostCreated> postCreatedKafkaTemplate;
+    private final UploaderServiceClient uploaderServiceClient;
 
-    public PostDto createPost(PostCreateRequestDto postCreateRequestDto, Long userId) {
+    public PostDto createPost(PostCreateRequestDto postCreateRequestDto, MultipartFile file) {
+        Long userId = AuthContextHolder.getCurrentUserId();
         log.info("creating post for user with id: {}", userId);
 
+        ResponseEntity<String> imageUrl = uploaderServiceClient.uploadFile(file);
         
         Post post = modelMapper.map(postCreateRequestDto, Post.class);
         post.setUserId(userId);
+        post.setImageUrl(imageUrl.getBody());
         post = postRepository.save(post);
 
         List<PersonDto> personDtoList = connectionsServiceClient.getFirstDegreeConnections(userId);
