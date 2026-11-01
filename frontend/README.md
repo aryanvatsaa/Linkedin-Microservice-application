@@ -1,16 +1,43 @@
-# React + Vite
+# Nexora frontend
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+Nexora is a React application built with Vite. Its local development server proxies
+`/api/v1` requests to the API Gateway at `http://localhost:8081`; the browser does
+not call individual microservices directly.
 
-Currently, two official plugins are available:
+## Run locally
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+```sh
+npm install
+npm run dev
+```
 
-## React Compiler
+To use a different Gateway URL, set `VITE_API_BASE_URL` to its `/api/v1` base URL.
+The deployment environment must allow browser requests to that Gateway origin.
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+## Integrated flows
 
-## Expanding the ESLint configuration
+- Sign-up and sign-in use the user service through `/api/v1/users/auth/signup`
+  and `/api/v1/users/auth/login`. Both return an access token and user profile.
+- Authenticated profile, directory, connection requests, feed, post publishing,
+  likes, and notification-read operations go through the Gateway.
+- The posts service owns post creation and likes; it calls the uploader service for
+  optional images and publishes post activity through Kafka. The connection service
+  owns connection state and publishes connection activity through Kafka.
+- Comments and saved posts are persisted by the posts service. New comments on
+  another member's post publish an asynchronous Kafka notification.
+- The home feed combines the signed-in user's posts with posts from first-degree
+  connections.
 
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
+Messaging and opportunities are intentionally out of scope.
+
+The backend creates connection graph nodes from Kafka user-created events and
+persists post/connection notification events asynchronously. Start Kafka before
+testing signup, connection requests, or the notification event flow. Each service
+also requires its own configured database, Eureka, and (for connections) Neo4j.
+
+## Checks
+
+```sh
+npm run lint
+npm run build
+```
