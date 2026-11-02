@@ -5,8 +5,10 @@ import org.springframework.stereotype.Service;
 
 import com.aryan.linkedinProject.notification_service.entity.Notification;
 import com.aryan.linkedinProject.notification_service.service.NotificationService;
+import com.aryan.linkedinProject.connectionService.event.ConnectionEvent;
 import com.aryan.linkedinProject.postsService.event.PostCreated;
 import com.aryan.linkedinProject.postsService.event.PostLiked;
+import com.aryan.linkedinProject.postsService.event.PostCommentCreated;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -22,10 +24,15 @@ public class PostsConsumer {
     public void handlePostCreated(PostCreated postCreated){
         log.info("handlePostCreated: {}", postCreated);
 
-        String message = String.format("Your connection with id: %d has created this post: %s", postCreated.getOwnerUserId(), postCreated.getContent());
+        String message = postCreated.getContent() == null || postCreated.getContent().isBlank()
+                ? "shared a new post"
+                : "shared a post: " + postCreated.getContent();
         Notification notification = Notification.builder()
                 .message(message)
                 .userId(postCreated.getUserId())
+                .type("post")
+                .actorUserId(postCreated.getOwnerUserId())
+                .postId(postCreated.getPostId())
                 .build();
         notificationService.addNotification(notification);
 
@@ -35,14 +42,41 @@ public class PostsConsumer {
     public void handlePostLiked(PostLiked postLiked){
         log.info("handlePostLikes: {}", postLiked);
 
-        String message = String.format("User with id: %d has liked your post with id: %d",
-                postLiked.getLikedByUserId(), postLiked.getPostId());
-
         Notification notification = Notification.builder()
-                .message(message)
+                .message("appreciated your post")
                 .userId(postLiked.getOwnerUserId())
+                .type("like")
+                .actorUserId(postLiked.getLikedByUserId())
+                .postId(postLiked.getPostId())
                 .build();
         notificationService.addNotification(notification);
+    }
+
+    @KafkaListener(topics = "post_comment_created_topic")
+    public void handlePostCommentCreated(PostCommentCreated event) {
+        log.info("handlePostCommentCreated: {}", event);
+
+        Notification notification = Notification.builder()
+                .message("commented on your post")
+                .userId(event.getPostOwnerId())
+                .type("comment")
+                .actorUserId(event.getCommenterUserId())
+                .postId(event.getPostId())
+                .build();
+        notificationService.addNotification(notification);
+    }
+
+    @KafkaListener(topics = "connection_events_topic")
+    public void handleConnectionEvent(ConnectionEvent event) {
+        String message = event.getType().equals("connection_request")
+                ? "sent you a connection request"
+                : "accepted your connection request";
+        notificationService.addNotification(Notification.builder()
+                .message(message)
+                .userId(event.getRecipientUserId())
+                .actorUserId(event.getActorUserId())
+                .type(event.getType())
+                .build());
     }
 
 }

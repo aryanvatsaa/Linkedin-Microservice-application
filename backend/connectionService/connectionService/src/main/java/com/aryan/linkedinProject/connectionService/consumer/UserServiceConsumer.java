@@ -5,6 +5,7 @@ import org.springframework.stereotype.Service;
 
 import com.aryan.linkedinProject.connectionService.service.PersonService;
 import com.aryan.linkedinProject.userService.event.UserCreatedEvent;
+import com.aryan.linkedinProject.userService.event.UserUpdatedEvent;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -20,6 +21,11 @@ public class UserServiceConsumer {
     public void handlePersonCreated(UserCreatedEvent userCreatedEvent){
         log.info("handlePersonCreated: {}", userCreatedEvent);
         personService.createPerson(userCreatedEvent.getUserId(), userCreatedEvent.getName());
+    }
+
+    @KafkaListener(topics = "user_updated_topic")
+    public void handlePersonUpdated(UserUpdatedEvent event) {
+        personService.updatePerson(event.getUserId(), event.getName(), event.getHeadline());
     }
 
 }

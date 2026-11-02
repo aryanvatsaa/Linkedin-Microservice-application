@@ -8,5 +8,6 @@ public class PersonDto {
     private Long id;
     private Long userId;
     private String name;
+    private String headline;
     
 }

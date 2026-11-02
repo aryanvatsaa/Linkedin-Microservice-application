@@ -3,7 +3,7 @@ package com.aryan.linkedinProject.postsService;
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.test.context.SpringBootTest;
 
-@SpringBootTest
+@SpringBootTest(classes = PostsServiceApplication.class)
 class PostsServiceApplicationTests {
 
 	@Test

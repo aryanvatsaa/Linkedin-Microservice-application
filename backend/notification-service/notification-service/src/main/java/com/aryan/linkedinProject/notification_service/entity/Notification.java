@@ -8,6 +8,7 @@ import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
+import jakarta.persistence.Column;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
@@ -27,6 +28,12 @@ public class Notification {
     private Long id;
     private Long userId;
     private String message;
+    private String type;
+    private Long actorUserId;
+    private Long postId;
+
+    @Column(nullable = false, columnDefinition = "boolean default false")
+    private boolean isRead;
 
     @CreationTimestamp
     private LocalDateTime createdAt;

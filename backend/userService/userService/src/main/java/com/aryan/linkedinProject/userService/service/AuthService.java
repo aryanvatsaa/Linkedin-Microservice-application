@@ -3,9 +3,11 @@ package com.aryan.linkedinProject.userService.service;
 import org.modelmapper.ModelMapper;
 import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import com.aryan.linkedinProject.userService.dto.LoginRequestDto;
 import com.aryan.linkedinProject.userService.dto.SignupRequestDto;
+import com.aryan.linkedinProject.userService.dto.AuthResponseDto;
 import com.aryan.linkedinProject.userService.dto.UserDto;
 import com.aryan.linkedinProject.userService.entity.User;
 import com.aryan.linkedinProject.userService.event.UserCreatedEvent;
@@ -26,15 +28,19 @@ public class AuthService {
     private final JwtService jwtService;
     private final KafkaTemplate<Long, UserCreatedEvent> userCreatedEventKafkaTemplate;
 
-    public UserDto signUp(SignupRequestDto signupRequestDto) {
-        log.info("SignUp a user with email : {}", signupRequestDto.getEmail());
+    @Transactional
+    public AuthResponseDto signUp(SignupRequestDto signupRequestDto) {
+        String email = signupRequestDto.getEmail().trim().toLowerCase();
+        log.info("Signing up a user");
 
-        boolean exists = userRepository.existsByEmail(signupRequestDto.getEmail());
+        boolean exists = userRepository.existsByEmail(email);
         if(exists){
             throw new BadRequestException("User already exists");
         }
 
         User user = modelMapper.map(signupRequestDto, User.class);
+        user.setName(signupRequestDto.getName().trim());
+        user.setEmail(email);
         user.setPassword(BCrypt.hash(signupRequestDto.getPassword()));
 
         user = userRepository.save(user);
@@ -47,14 +53,16 @@ public class AuthService {
         userCreatedEventKafkaTemplate.send("user_created_topic", userCreatedEvent);
 
 
-        return modelMapper.map(user, UserDto.class);
+        return createAuthResponse(user);
         
     }
 
-    public String login(LoginRequestDto loginRequestDto) {
-        log.info("login request for user with email: {}", loginRequestDto.getEmail());
+    @Transactional(readOnly = true)
+    public AuthResponseDto login(LoginRequestDto loginRequestDto) {
+        String email = loginRequestDto.getEmail().trim().toLowerCase();
+        log.info("login request received");
 
-        User user = userRepository.findByEmail(loginRequestDto.getEmail())
+        User user = userRepository.findByEmail(email)
             .orElseThrow(() -> new BadRequestException("Incorrect email or password !!"));
 
         boolean isPasswordMatch = BCrypt.match(loginRequestDto.getPassword(), user.getPassword());
@@ -63,7 +71,13 @@ public class AuthService {
             throw new BadRequestException("Incorrect email or password !!");
         }
 
-        return jwtService.generateAccessToken(user);
+        return createAuthResponse(user);
+    }
+
+    private AuthResponseDto createAuthResponse(User user) {
+        return new AuthResponseDto(
+                jwtService.generateAccessToken(user),
+                modelMapper.map(user, UserDto.class));
     }
 
 }

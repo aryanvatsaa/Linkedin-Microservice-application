@@ -12,7 +12,6 @@ import org.springframework.web.bind.annotation.RequestPart;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
 
-import com.aryan.linkedinProject.postsService.auth.AuthContextHolder;
 import com.aryan.linkedinProject.postsService.dto.PostCreateRequestDto;
 import com.aryan.linkedinProject.postsService.dto.PostDto;
 import com.aryan.linkedinProject.postsService.service.PostService;
@@ -28,16 +27,22 @@ public class PostController {
     private final PostService postService;
 
     @PostMapping(consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
-    public ResponseEntity<PostDto> createPost(@RequestPart("post") PostCreateRequestDto postCreateRequestDto, @RequestPart("file")MultipartFile file){
+    public ResponseEntity<PostDto> createPost(
+            @RequestPart("post") PostCreateRequestDto postCreateRequestDto,
+            @RequestPart(value = "file", required = false) MultipartFile file) {
         PostDto postDto = postService.createPost(postCreateRequestDto, file);
         return new ResponseEntity<>(postDto, HttpStatus.CREATED);
     }
 
     @GetMapping("/{postId}")
     public ResponseEntity<PostDto> getPost(@PathVariable Long postId){
-        Long userId = AuthContextHolder.getCurrentUserId();
         PostDto postDto = postService.getPostById(postId);
         return ResponseEntity.ok(postDto);
+    }
+
+    @GetMapping("/feed")
+    public ResponseEntity<List<PostDto>> getFeed() {
+        return ResponseEntity.ok(postService.getFeed());
     }
 
     @GetMapping("/users/{userId}/allPosts")

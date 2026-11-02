@@ -27,29 +27,36 @@ public class AuthenticationFilter extends AbstractGatewayFilterFactory<Authentic
 
             final String tokenHeader = exchange.getRequest().getHeaders().getFirst("Authorization");
 
-            if(tokenHeader == null || !tokenHeader.startsWith("Bearer")) {
+            if (tokenHeader == null || !tokenHeader.startsWith("Bearer ")) {
                 exchange.getResponse().setStatusCode(HttpStatus.UNAUTHORIZED);
                 return exchange.getResponse().setComplete();
             }
 
-            final String token = tokenHeader.split("Bearer ")[1];
+            final String token = tokenHeader.substring("Bearer ".length()).trim();
+            if (token.isEmpty()) {
+                exchange.getResponse().setStatusCode(HttpStatus.UNAUTHORIZED);
+                return exchange.getResponse().setComplete();
+            }
 
             try {
                 String userId = jwtService.getUserIdFromToken(token);
                 ServerWebExchange mutatedExchange = exchange.mutate()
-                        .request(r -> r.header("X-User-Id", userId))
+                        .request(r -> r.headers(headers -> {
+                            headers.remove("X-User-Id");
+                            headers.add("X-User-Id", userId);
+                        }))
                         .build();
 
                 return chain.filter(mutatedExchange);
-            } catch (JwtException e) {
-                log.error("JWT Exception {}", e.getLocalizedMessage());
+            } catch (JwtException | IllegalArgumentException e) {
+                log.warn("JWT validation failed: {}", e.getMessage());
                 exchange.getResponse().setStatusCode(HttpStatus.UNAUTHORIZED);
                 return exchange.getResponse().setComplete();
             }
         };
     }
 
-    static class Config {
+    public static class Config {
 
     }
 }

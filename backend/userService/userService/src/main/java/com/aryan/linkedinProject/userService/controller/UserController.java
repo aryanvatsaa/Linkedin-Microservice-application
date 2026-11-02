@@ -9,9 +9,10 @@ import org.springframework.web.bind.annotation.RestController;
 
 import com.aryan.linkedinProject.userService.dto.LoginRequestDto;
 import com.aryan.linkedinProject.userService.dto.SignupRequestDto;
-import com.aryan.linkedinProject.userService.dto.UserDto;
+import com.aryan.linkedinProject.userService.dto.AuthResponseDto;
 import com.aryan.linkedinProject.userService.service.AuthService;
 
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 
 @RestController 
@@ -22,16 +23,15 @@ public class UserController {
     private final AuthService authService;
 
     @PostMapping("/signup")
-    public ResponseEntity<UserDto> signUp(@RequestBody SignupRequestDto signupRequestDto){
-        UserDto userDto = authService.signUp(signupRequestDto);
-        return new ResponseEntity<>(userDto, HttpStatus.CREATED);
+    public ResponseEntity<AuthResponseDto> signUp(@Valid @RequestBody SignupRequestDto signupRequestDto){
+        AuthResponseDto authResponse = authService.signUp(signupRequestDto);
+        return new ResponseEntity<>(authResponse, HttpStatus.CREATED);
     }
 
     @PostMapping("/login")
-    public ResponseEntity<String> login(@RequestBody LoginRequestDto loginRequestDto){
-        String toekn = authService.login(loginRequestDto);
-        return ResponseEntity.ok(toekn);
+    public ResponseEntity<AuthResponseDto> login(@Valid @RequestBody LoginRequestDto loginRequestDto){
+        AuthResponseDto authResponse = authService.login(loginRequestDto);
+        return ResponseEntity.ok(authResponse);
     }
-
 
 }

@@ -10,6 +10,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.aryan.linkedinProject.connectionService.entity.Person;
+import com.aryan.linkedinProject.connectionService.auth.AuthContextHolder;
 import com.aryan.linkedinProject.connectionService.service.ConnectionsService;
 
 import lombok.RequiredArgsConstructor;
@@ -23,11 +24,27 @@ public class ConnectionsController {
 
     private final ConnectionsService connectionsService;
 
+    @GetMapping("/me")
+    public ResponseEntity<List<Person>> getMyConnections() {
+        return ResponseEntity.ok(connectionsService.getFirstDegreeConnectionsOfUser(
+                AuthContextHolder.getCurrentUserId()));
+    }
+
     @GetMapping("/{userId}/first-degree")
     public ResponseEntity<List<Person>> getFirstDegreeConnections(@PathVariable Long userId) {
 
         List<Person> personList = connectionsService.getFirstDegreeConnectionsOfUser(userId);
         return ResponseEntity.ok(personList);
+    }
+
+    @GetMapping("/requests/incoming")
+    public ResponseEntity<List<Person>> getIncomingRequests() {
+        return ResponseEntity.ok(connectionsService.getIncomingRequests());
+    }
+
+    @GetMapping("/requests/outgoing")
+    public ResponseEntity<List<Person>> getOutgoingRequests() {
+        return ResponseEntity.ok(connectionsService.getOutgoingRequests());
     }
 
     @PostMapping("/request/{userId}")

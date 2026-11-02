@@ -5,25 +5,33 @@ import org.springframework.web.servlet.HandlerInterceptor;
 
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+import org.springframework.http.HttpStatus;
 
 @Component
 public class RequestInterceptor implements HandlerInterceptor{
 
 
     @Override
-    public boolean preHandle(HttpServletRequest request, HttpServletResponse response, Object handler)
-            throws Exception {
+    public boolean preHandle(HttpServletRequest request, HttpServletResponse response, Object handler) {
         String userId = request.getHeader("X-User-Id");
-        AuthContextHolder.setCurrentUserId(Long.valueOf(userId));
-        return HandlerInterceptor.super.preHandle(request, response, handler);
+        if (userId == null || userId.isBlank()) {
+            response.setStatus(HttpStatus.UNAUTHORIZED.value());
+            return false;
+        }
+        try {
+            AuthContextHolder.setCurrentUserId(Long.valueOf(userId));
+            return true;
+        } catch (NumberFormatException exception) {
+            response.setStatus(HttpStatus.UNAUTHORIZED.value());
+            return false;
+        }
     }
 
 
     @Override
     public void afterCompletion(HttpServletRequest request, HttpServletResponse response, Object handler,
-            Exception ex) throws Exception {
+            Exception ex) {
         AuthContextHolder.clear();
-        HandlerInterceptor.super.afterCompletion(request, response, handler, ex);
     }
 
     
