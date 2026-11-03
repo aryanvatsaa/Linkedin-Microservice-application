@@ -7,7 +7,6 @@ import PostCard from '../../feed/components/PostCard'
 import { useFeed } from '../../feed/data/useFeed'
 import {
   getConnections,
-  getDirectory,
   getIncomingRequests,
   getOutgoingRequests,
   sendConnectionRequest,
@@ -15,6 +14,7 @@ import {
 import { createComment, setPostLiked, setPostSaved } from '../../feed/data/postsApi'
 import { formatComment } from '../../feed/data/postFormatting'
 import { useAuth } from '../../auth/data/useAuth'
+import { useToast } from '../../../app/useToast'
 
 export default function DiscoverPage() {
   const { user } = useAuth()
@@ -26,12 +26,13 @@ export default function DiscoverPage() {
   const [incomingIds, setIncomingIds] = useState([])
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState('')
-  const { posts, setPosts } = useFeed()
+  const { posts, setPosts, directory } = useFeed()
+  const notify = useToast()
 
   useEffect(() => {
     let active = true
-    Promise.all([getDirectory(), getConnections(), getOutgoingRequests(), getIncomingRequests()])
-      .then(([directory, connections, outgoing, incoming]) => {
+    Promise.all([getConnections(), getOutgoingRequests(), getIncomingRequests()])
+      .then(([connections, outgoing, incoming]) => {
         if (!active) return
         setPeople(directory.map((person) => ({
           ...person,
@@ -51,7 +52,7 @@ export default function DiscoverPage() {
         if (active) setIsLoading(false)
       })
     return () => { active = false }
-  }, [])
+  }, [directory])
 
   const filteredPeople = useMemo(() => people.filter((person) =>
       `${person.name} ${person.role}`.toLowerCase().includes(query.toLowerCase()),
@@ -62,11 +63,15 @@ export default function DiscoverPage() {
   )
 
   async function requestConnection(personId) {
+    notify('Sending connection request…', 'loading')
     try {
       await sendConnectionRequest(personId)
       setPendingIds((current) => [...current, personId])
+      notify('Connection request sent.')
     } catch (requestError) {
-      setError(requestError.response?.data?.error || 'Could not send this connection request.')
+      const message = requestError.response?.data?.error || 'Could not send this connection request.'
+      setError(message)
+      notify(message, 'error')
     }
   }
 
@@ -78,8 +83,10 @@ export default function DiscoverPage() {
       setPosts((current) => current.map((item) => item.id === postId
         ? { ...item, liked: !item.liked, likes: item.likes + (item.liked ? -1 : 1) }
         : item))
+      return true
     } catch (requestError) {
       setError(requestError.response?.data?.error || 'Could not update this appreciation.')
+      return false
     }
   }
 
@@ -89,8 +96,10 @@ export default function DiscoverPage() {
     try {
       await setPostSaved(postId, !post.saved)
       setPosts((current) => current.map((item) => item.id === postId ? { ...item, saved: !post.saved } : item))
+      return true
     } catch (requestError) {
       setError(requestError.response?.data?.error || 'Could not save this post.')
+      return false
     }
   }
 
@@ -100,7 +109,7 @@ export default function DiscoverPage() {
       setPosts((current) => current.map((post) => post.id === postId
         ? {
             ...post,
-            commentItems: [...(post.commentItems ?? []), formatComment(comment, user)],
+            commentItems: [...(post.commentItems ?? []), formatComment(comment, user, directory)],
             comments: (post.comments ?? 0) + 1,
           }
         : post))

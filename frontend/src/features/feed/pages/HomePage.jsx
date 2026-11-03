@@ -5,15 +5,17 @@ import AppSidebar from '../../../components/layout/AppSidebar'
 import { Avatar } from '../../../components/ui/Avatar'
 import { Icon } from '../../../components/ui/Icon'
 import PostCard from '../components/PostCard'
-import { getConnections, getDirectory, getOutgoingRequests, sendConnectionRequest } from '../../discover/data/discoverApi'
+import { getConnections, getOutgoingRequests, sendConnectionRequest } from '../../discover/data/discoverApi'
 import { useFeed } from '../data/useFeed'
 import { useAuth } from '../../auth/data/useAuth'
 import { createComment, createPost, setPostLiked, setPostSaved } from '../data/postsApi'
 import { formatComment, formatPost } from '../data/postFormatting'
+import { useToast } from '../../../app/useToast'
 
 export default function HomePage() {
-  const { posts, setPosts, isLoading, loadError, setLoadError } = useFeed()
+  const { posts, setPosts, isLoading, loadError, setLoadError, directory } = useFeed()
   const { user } = useAuth()
+  const notify = useToast()
   const [draft, setDraft] = useState('')
   const [imagePreviewUrl, setImagePreviewUrl] = useState('')
   const [selectedImageFile, setSelectedImageFile] = useState(null)
@@ -23,8 +25,8 @@ export default function HomePage() {
 
   useEffect(() => {
     let active = true
-    Promise.all([getDirectory(), getConnections(), getOutgoingRequests()])
-      .then(([directory, connections, outgoing]) => {
+    Promise.all([getConnections(), getOutgoingRequests()])
+      .then(([connections, outgoing]) => {
         const unavailableIds = new Set([
           ...connections.map((person) => person.userId),
           ...outgoing.map((person) => person.userId),
@@ -43,7 +45,7 @@ export default function HomePage() {
         if (active) setConnectionError(error.response?.data?.error || 'Could not load suggestions.')
       })
     return () => { active = false }
-  }, [])
+  }, [directory])
 
   async function publishPost(event) {
     event.preventDefault()
@@ -51,14 +53,18 @@ export default function HomePage() {
     if (!content && !imagePreviewUrl) return
 
     setComposerError('')
+    notify(selectedImageFile ? 'Uploading your image and sharing the post…' : 'Sharing your post…', 'loading')
     try {
       const post = await createPost(content, selectedImageFile)
-      setPosts((currentPosts) => [formatPost(post, user), ...currentPosts])
+      setPosts((currentPosts) => [formatPost(post, user, directory), ...currentPosts])
       setDraft('')
       setImagePreviewUrl('')
       setSelectedImageFile(null)
+      notify('Your post was shared.')
     } catch (error) {
-      setComposerError(error.response?.data?.error || error.response?.data?.message || 'Your post could not be shared. Please try again.')
+      const message = error.response?.data?.error || error.response?.data?.message || 'Your post could not be shared. Please try again.'
+      setComposerError(message)
+      notify(message, 'error')
     }
   }
 
@@ -73,8 +79,10 @@ export default function HomePage() {
           ? { ...item, liked: !item.liked, likes: item.likes + (item.liked ? -1 : 1) }
           : item
       )))
+      return true
     } catch (error) {
       setLoadError(error.response?.data?.error || error.response?.data?.message || 'Your appreciation could not be saved. Please try again.')
+      return false
     }
   }
 
@@ -86,8 +94,10 @@ export default function HomePage() {
       setPosts((currentPosts) => currentPosts.map((item) =>
         item.id === postId ? { ...item, saved: !post.saved } : item,
       ))
+      return true
     } catch (error) {
       setLoadError(error.response?.data?.error || error.response?.data?.message || 'This post could not be saved. Please try again.')
+      return false
     }
   }
 
@@ -97,7 +107,7 @@ export default function HomePage() {
       setPosts((currentPosts) => currentPosts.map((post) => post.id === postId
         ? {
             ...post,
-            commentItems: [...(post.commentItems ?? []), formatComment(comment, user)],
+            commentItems: [...(post.commentItems ?? []), formatComment(comment, user, directory)],
             comments: (post.comments ?? 0) + 1,
           }
         : post))
@@ -144,11 +154,15 @@ export default function HomePage() {
   }
 
   async function requestConnection(personId) {
+    notify('Sending connection request…', 'loading')
     try {
       await sendConnectionRequest(personId)
       setSuggestedPeople((current) => current.filter((person) => person.id !== personId))
+      notify('Connection request sent.')
     } catch (error) {
-      setConnectionError(error.response?.data?.error || 'Could not send this connection request.')
+      const message = error.response?.data?.error || 'Could not send this connection request.'
+      setConnectionError(message)
+      notify(message, 'error')
     }
   }
 

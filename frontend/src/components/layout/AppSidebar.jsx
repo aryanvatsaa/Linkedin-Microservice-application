@@ -2,9 +2,11 @@ import { Link, NavLink } from 'react-router'
 import { Avatar } from '../ui/Avatar'
 import { Icon } from '../ui/Icon'
 import { useAuth } from '../../features/auth/data/useAuth'
+import { useToast } from '../../app/useToast'
 
 export default function AppSidebar() {
   const { user, signOut } = useAuth()
+  const notify = useToast()
   const initials = user.name.split(/\s+/).slice(0, 2).map((part) => part[0]).join('').toUpperCase()
 
   return (
@@ -44,7 +46,7 @@ export default function AppSidebar() {
         <p>Make today a little more connected.</p>
         <Link to="/home#feed-composer">Start a conversation <Icon name="arrow" size={14} /></Link>
       </div>
-      <button type="button" className="sidebar-back" onClick={signOut}><Icon name="chevron" size={15} /> Sign out</button>
+      <button type="button" className="sidebar-back" onClick={() => { notify('You’ve been signed out.'); signOut() }}><Icon name="chevron" size={15} /> Sign out</button>
     </aside>
   )
 }

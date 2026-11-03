@@ -5,12 +5,14 @@ import { Icon } from '../../../components/ui/Icon'
 import { ThemeToggle } from '../../../components/ui/ThemeToggle'
 import { signIn, signUp } from '../data/authApi'
 import { useAuth } from '../data/useAuth'
+import { useToast } from '../../../app/useToast'
 
 export default function AuthPage({ mode }) {
   const isSignup = mode === 'signup'
   const navigate = useNavigate()
   const location = useLocation()
   const { signIn: saveSession } = useAuth()
+  const notify = useToast()
   const [formError, setFormError] = useState('')
   const [isSubmitting, setIsSubmitting] = useState(false)
 
@@ -29,15 +31,19 @@ export default function AuthPage({ mode }) {
 
     setFormError('')
     setIsSubmitting(true)
+    notify(isSignup ? 'Creating your account…' : 'Signing you in…', 'loading')
     try {
       const authResponse = isSignup
         ? await signUp({ ...credentials, name: String(formData.get('name')).trim() })
         : await signIn(credentials)
       saveSession(authResponse)
       const destination = location.state?.from?.pathname || '/home'
+      notify(isSignup ? 'Your account is ready. Welcome to Nexora!' : 'You’re signed in. Welcome back!')
       navigate(destination, { replace: true })
     } catch (error) {
-      setFormError(error.response?.data?.error || error.response?.data?.message || 'We could not complete that request. Please try again.')
+      const message = error.response?.data?.error || error.response?.data?.message || 'We could not complete that request. Please try again.'
+      setFormError(message)
+      notify(message, 'error')
     } finally {
       setIsSubmitting(false)
     }

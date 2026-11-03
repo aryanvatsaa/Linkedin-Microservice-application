@@ -11,10 +11,12 @@ import { getProfile, updateProfile } from '../data/profileApi'
 import { getConnections } from '../../connections/data/connectionsApi'
 import { createComment, setPostLiked } from '../../feed/data/postsApi'
 import { formatComment } from '../../feed/data/postFormatting'
+import { useToast } from '../../../app/useToast'
 
 export default function ProfilePage() {
   const { user, updateUser } = useAuth()
-  const { posts, setPosts } = useFeed()
+  const { posts, setPosts, directory } = useFeed()
+  const notify = useToast()
   const [profile, setProfile] = useState({
     name: user.name,
     email: user.email,
@@ -67,6 +69,7 @@ export default function ProfilePage() {
     setError('')
     setStatus('')
     setIsSaving(true)
+    notify('Saving your profile…', 'loading')
     try {
       const savedProfile = await updateProfile({
         name: draft.name,
@@ -81,8 +84,11 @@ export default function ProfilePage() {
       updateUser(savedProfile)
       setIsEditing(false)
       setStatus('Your profile has been updated.')
+      notify('Your profile has been updated.')
     } catch (requestError) {
-      setError(requestError.response?.data?.error || 'Could not save your profile. Please try again.')
+      const message = requestError.response?.data?.error || 'Could not save your profile. Please try again.'
+      setError(message)
+      notify(message, 'error')
     } finally {
       setIsSaving(false)
     }
@@ -101,8 +107,10 @@ export default function ProfilePage() {
       setPosts((currentPosts) => currentPosts.map((item) => item.id === postId
         ? { ...item, liked: !item.liked, likes: item.likes + (item.liked ? -1 : 1) }
         : item))
+      return true
     } catch (requestError) {
       setError(requestError.response?.data?.error || 'Could not update this appreciation.')
+      return false
     }
   }
 
@@ -112,7 +120,7 @@ export default function ProfilePage() {
       setPosts((currentPosts) => currentPosts.map((post) => post.id === postId
         ? {
             ...post,
-            commentItems: [...(post.commentItems ?? []), formatComment(comment, user)],
+            commentItems: [...(post.commentItems ?? []), formatComment(comment, user, directory)],
             comments: (post.comments ?? 0) + 1,
           }
         : post))

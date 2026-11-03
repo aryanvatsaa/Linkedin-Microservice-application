@@ -1,21 +1,68 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Avatar } from '../../../components/ui/Avatar'
 import { Icon } from '../../../components/ui/Icon'
+import { useToast } from '../../../app/useToast'
+import { formatPostTime } from '../data/postFormatting'
 
 export default function PostCard({ post, onToggleLike, onToggleSave, onAddComment }) {
+  const notify = useToast()
+  const [now, setNow] = useState(0)
   const [commentsOpen, setCommentsOpen] = useState(false)
   const [commentDraft, setCommentDraft] = useState('')
   const [shareMessage, setShareMessage] = useState('')
   const comments = post.commentItems ?? []
+  const postTime = post.createdAt && now ? formatPostTime(post.createdAt, now) : post.time
+
+  useEffect(() => {
+    const interval = window.setInterval(() => setNow(Date.now()), 60000)
+    return () => window.clearInterval(interval)
+  }, [])
 
   async function submitComment(event) {
     event.preventDefault()
     const text = commentDraft.trim()
     if (!text) return
-    const succeeded = await onAddComment?.(post.id, text)
-    if (succeeded === false) return
-    setCommentDraft('')
-    setCommentsOpen(true)
+    notify('Posting your comment…', 'loading')
+    try {
+      const succeeded = await onAddComment?.(post.id, text)
+      if (succeeded === false) {
+        notify('Your comment could not be posted. Please try again.', 'error')
+        return
+      }
+      setCommentDraft('')
+      setCommentsOpen(true)
+      notify('Your comment was posted.')
+    } catch {
+      notify('Your comment could not be posted. Please try again.', 'error')
+    }
+  }
+
+  async function toggleLike() {
+    const isAppreciating = !post.liked
+    notify(isAppreciating ? 'Sending your appreciation…' : 'Updating your appreciation…', 'loading')
+    try {
+      const succeeded = await onToggleLike?.(post.id)
+      notify(succeeded === false
+        ? 'Could not update this appreciation. Please try again.'
+        : isAppreciating ? 'You appreciated this post.' : 'Appreciation removed.',
+      succeeded === false ? 'error' : 'success')
+    } catch {
+      notify('Could not update this appreciation. Please try again.', 'error')
+    }
+  }
+
+  async function toggleSave() {
+    const isSaving = !post.saved
+    notify(isSaving ? 'Saving this post…' : 'Removing this saved post…', 'loading')
+    try {
+      const succeeded = await onToggleSave?.(post.id)
+      notify(succeeded === false
+        ? 'Could not update your saved posts. Please try again.'
+        : isSaving ? 'Post saved.' : 'Post removed from saved posts.',
+      succeeded === false ? 'error' : 'success')
+    } catch {
+      notify('Could not update your saved posts. Please try again.', 'error')
+    }
   }
 
   async function sharePost() {
@@ -25,14 +72,20 @@ export default function PostCard({ post, onToggleLike, onToggleSave, onAddCommen
       if (navigator.share) {
         await navigator.share({ title: `${post.name} on Nexora`, url })
         setShareMessage('Link ready to share.')
+        notify('Post link shared.')
       } else if (navigator.clipboard?.writeText) {
         await navigator.clipboard.writeText(url)
         setShareMessage('Post link copied.')
+        notify('Post link copied.')
       } else {
         setShareMessage('Sharing isn’t available in this browser.')
+        notify('Sharing isn’t available in this browser.', 'error')
       }
     } catch (error) {
-      if (error.name !== 'AbortError') setShareMessage('Could not share this post right now.')
+      if (error.name !== 'AbortError') {
+        setShareMessage('Could not share this post right now.')
+        notify('Could not share this post right now.', 'error')
+      }
     }
   }
 
@@ -43,7 +96,7 @@ export default function PostCard({ post, onToggleLike, onToggleSave, onAddCommen
         <div className="post-author-info">
           <strong>{post.name}</strong>
           <span>{post.role}</span>
-          <span>{post.time} <span className="post-dot">·</span> <Icon name="globe" size={12} /></span>
+          <span>{postTime} <span className="post-dot">·</span> <Icon name="globe" size={12} /></span>
         </div>
         <button className="post-more" aria-label={`More options for ${post.name}'s post`}>···</button>
       </div>
@@ -62,14 +115,14 @@ export default function PostCard({ post, onToggleLike, onToggleSave, onAddCommen
       </div>
       <div className="post-divider" />
       <div className="post-actions">
-        <button className={post.liked ? 'is-liked' : ''} onClick={() => onToggleLike(post.id)}>
+        <button className={post.liked ? 'is-liked' : ''} onClick={toggleLike}>
           <Icon name="heart" size={18} /> Appreciate
         </button>
         <button onClick={() => setCommentsOpen((open) => !open)} aria-expanded={commentsOpen}>
           <Icon name="comment" size={18} /> Comment
         </button>
         {onToggleSave && (
-          <button className={post.saved ? 'is-saved' : ''} onClick={() => onToggleSave(post.id)} aria-label={post.saved ? 'Remove from saved' : 'Save post'}>
+          <button className={post.saved ? 'is-saved' : ''} onClick={toggleSave} aria-label={post.saved ? 'Remove from saved' : 'Save post'}>
             <Icon name="bookmark" size={18} /> <span className="save-label">{post.saved ? 'Saved' : 'Save'}</span>
           </button>
         )}

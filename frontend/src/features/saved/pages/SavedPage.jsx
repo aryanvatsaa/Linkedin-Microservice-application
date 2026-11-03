@@ -10,7 +10,7 @@ import { useAuth } from '../../auth/data/useAuth'
 
 export default function SavedPage() {
   const { user } = useAuth()
-  const { setPosts } = useFeed()
+  const { setPosts, directory } = useFeed()
   const [savedPosts, setSavedPosts] = useState([])
   const [error, setError] = useState('')
   const [isLoading, setIsLoading] = useState(true)
@@ -19,7 +19,7 @@ export default function SavedPage() {
     let active = true
     getSavedPosts()
       .then((items) => {
-        if (active) setSavedPosts(items.map((post) => formatPost(post, user)))
+        if (active) setSavedPosts(items.map((post) => formatPost(post, user, directory)))
       })
       .catch((requestError) => {
         if (active) setError(requestError.response?.data?.error || 'Could not load your saved posts.')
@@ -28,7 +28,7 @@ export default function SavedPage() {
         if (active) setIsLoading(false)
       })
     return () => { active = false }
-  }, [user])
+  }, [user, directory])
 
   function updatePosts(postId, update) {
     setPosts((current) => current.map((post) => post.id === postId ? { ...post, ...update } : post))
@@ -40,9 +40,10 @@ export default function SavedPage() {
       setSavedPosts((current) => current.filter((post) => post.id !== postId))
     } catch (requestError) {
       setError(requestError.response?.data?.error || 'Could not remove this saved post.')
-      return
+      return false
     }
     updatePosts(postId, { saved: false })
+    return true
   }
 
   async function toggleLike(postId) {
@@ -53,14 +54,16 @@ export default function SavedPage() {
       const update = { liked: !post.liked, likes: post.likes + (post.liked ? -1 : 1) }
       updatePosts(postId, update)
       setSavedPosts((current) => current.map((item) => item.id === postId ? { ...item, ...update } : item))
+      return true
     } catch (requestError) {
       setError(requestError.response?.data?.error || 'Could not update this appreciation.')
+      return false
     }
   }
 
   async function addComment(postId, text) {
     try {
-      const comment = formatComment(await createComment(postId, text), user)
+      const comment = formatComment(await createComment(postId, text), user, directory)
       const updatePost = (post) => post.id === postId
         ? { ...post, commentItems: [...(post.commentItems ?? []), comment], comments: (post.comments ?? 0) + 1 }
         : post

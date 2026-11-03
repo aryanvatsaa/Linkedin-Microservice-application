@@ -5,6 +5,7 @@ import AppSidebar from '../../../components/layout/AppSidebar'
 import { Avatar } from '../../../components/ui/Avatar'
 import { Icon } from '../../../components/ui/Icon'
 import { acceptConnectionRequest, getConnections, getIncomingRequests, rejectConnectionRequest } from '../data/connectionsApi'
+import { useToast } from '../../../app/useToast'
 
 function mapPerson(person) {
   const name = person.name || 'Nexora member'
@@ -20,6 +21,7 @@ function mapPerson(person) {
 }
 
 export default function ConnectionsPage() {
+  const notify = useToast()
   const [requests, setRequests] = useState([])
   const [connections, setConnections] = useState([])
   const [query, setQuery] = useState('')
@@ -44,21 +46,29 @@ export default function ConnectionsPage() {
   }, [])
 
   async function acceptRequest(request) {
+    notify(`Accepting ${request.name}’s connection request…`, 'loading')
     try {
       await acceptConnectionRequest(request.id)
       setConnections((current) => [request, ...current])
       setRequests((current) => current.filter((item) => item.id !== request.id))
+      notify(`You’re now connected with ${request.name}.`)
     } catch (requestError) {
-      setError(requestError.response?.data?.error || 'Could not accept this request.')
+      const message = requestError.response?.data?.error || 'Could not accept this request.'
+      setError(message)
+      notify(message, 'error')
     }
   }
 
   async function ignoreRequest(requestId) {
+    notify('Dismissing connection request…', 'loading')
     try {
       await rejectConnectionRequest(requestId)
       setRequests((current) => current.filter((item) => item.id !== requestId))
+      notify('Connection request dismissed.')
     } catch (requestError) {
-      setError(requestError.response?.data?.error || 'Could not dismiss this request.')
+      const message = requestError.response?.data?.error || 'Could not dismiss this request.'
+      setError(message)
+      notify(message, 'error')
     }
   }
 
