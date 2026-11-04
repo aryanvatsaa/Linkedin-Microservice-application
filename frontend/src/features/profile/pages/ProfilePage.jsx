@@ -7,7 +7,7 @@ import { Icon } from '../../../components/ui/Icon'
 import PostCard from '../../feed/components/PostCard'
 import { useAuth } from '../../auth/data/useAuth'
 import { useFeed } from '../../feed/data/useFeed'
-import { getProfile, updateProfile } from '../data/profileApi'
+import { getProfile, updateProfile, updateProfilePhoto, uploadProfilePhoto } from '../data/profileApi'
 import { getConnections } from '../../connections/data/connectionsApi'
 import { createComment, setPostLiked } from '../../feed/data/postsApi'
 import { formatComment } from '../../feed/data/postFormatting'
@@ -32,6 +32,7 @@ export default function ProfilePage() {
   const [status, setStatus] = useState('')
   const [isLoading, setIsLoading] = useState(true)
   const [isSaving, setIsSaving] = useState(false)
+  const [isPhotoUploading, setIsPhotoUploading] = useState(false)
   const initials = profile.name.split(/\s+/).slice(0, 2).map((part) => part[0]).join('').toUpperCase()
   const completion = Math.round([
     profile.name,
@@ -99,6 +100,45 @@ export default function ProfilePage() {
     setIsEditing(false)
   }
 
+  async function changeProfilePhoto(event) {
+    const [file] = event.target.files ?? []
+    event.target.value = ''
+    if (!file) return
+    if (!file.type.startsWith('image/')) {
+      setError('Choose an image file for your profile photo.')
+      return
+    }
+    if (file.size > 5 * 1024 * 1024) {
+      setError('Choose a profile photo under 5 MB.')
+      return
+    }
+
+    setError('')
+    setStatus('')
+    setIsPhotoUploading(true)
+    notify('Uploading your profile photo…', 'loading')
+    try {
+      const uploadedUrl = await uploadProfilePhoto(file)
+      if (typeof uploadedUrl !== 'string' || !uploadedUrl.trim()) {
+        throw new Error('The photo upload did not return an image URL.')
+      }
+      const savedProfile = await updateProfilePhoto(uploadedUrl.trim())
+      setProfile((current) => ({ ...current, profilePhotoUrl: savedProfile.profilePhotoUrl }))
+      updateUser(savedProfile)
+      setStatus('Your profile photo has been updated.')
+      notify('Your profile photo has been updated.')
+    } catch (requestError) {
+      const message = requestError.response?.data?.error
+        || requestError.response?.data?.message
+        || requestError.message
+        || 'Could not update your profile photo. Please try again.'
+      setError(message)
+      notify(message, 'error')
+    } finally {
+      setIsPhotoUploading(false)
+    }
+  }
+
   async function toggleLike(postId) {
     const post = posts.find((item) => item.id === postId)
     if (!post) return
@@ -149,7 +189,13 @@ export default function ProfilePage() {
             </div>
             <div className="profile-main">
               <div className="profile-identity">
-                <Avatar initials={initials} tone="sage" size="profile" />
+                <div className="profile-photo-control">
+                  <Avatar initials={initials} imageUrl={profile.profilePhotoUrl} tone="sage" size="profile" />
+                  <label className={`profile-photo-button${isPhotoUploading ? ' is-uploading' : ''}`}>
+                    <Icon name="image" size={14} /> {isPhotoUploading ? 'Uploading…' : profile.profilePhotoUrl ? 'Change photo' : 'Add photo'}
+                    <input type="file" accept="image/*" onChange={changeProfilePhoto} disabled={isPhotoUploading} />
+                  </label>
+                </div>
                 <div className="profile-actions">
                   <button className="profile-edit-button" onClick={() => setIsEditing(true)}>
                     <Icon name="edit" size={15} /> Edit profile

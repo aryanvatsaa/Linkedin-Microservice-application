@@ -14,4 +14,5 @@ public class UserUpdatedEvent {
     private Long userId;
     private String name;
     private String headline;
+    private String profilePhotoUrl;
 }

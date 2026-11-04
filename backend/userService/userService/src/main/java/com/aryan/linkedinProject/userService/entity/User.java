@@ -37,6 +37,9 @@ public class User {
     private String about;
     private String location;
 
+    @Column(length = 2048)
+    private String profilePhotoUrl;
+
     @ElementCollection
     @CollectionTable(name = "user_interests", joinColumns = @JoinColumn(name = "user_id"))
     @Column(name = "interest", nullable = false)

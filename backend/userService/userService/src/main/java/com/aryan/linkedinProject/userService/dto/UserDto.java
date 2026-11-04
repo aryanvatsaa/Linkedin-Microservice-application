@@ -13,5 +13,6 @@ public class UserDto {
     private String headline;
     private String about;
     private String location;
+    private String profilePhotoUrl;
     private List<String> interests;
 }

@@ -346,7 +346,6 @@
   box-shadow: 0 3px 12px #080b090d;
 }
 
-:root[data-theme="dark"] .feed-filter,
 :root[data-theme="dark"] .composer-tools button,
 :root[data-theme="dark"] .post-actions button,
 :root[data-theme="dark"] .post-stats,
@@ -361,9 +360,22 @@
   color: #a2afa3;
 }
 
-:root[data-theme="dark"] .feed-filter,
-:root[data-theme="dark"] .feed-filter span {
+:root[data-theme="dark"] .feed-filter {
   color: #b9c5ba;
+}
+
+:root[data-theme="dark"] .feed-filter button[aria-pressed="true"] {
+  background: #364538;
+  color: #c4d4c0;
+}
+
+:root[data-theme="dark"] .composer-emoji-picker {
+  border-color: #3b483c;
+  background: #212a23;
+}
+
+:root[data-theme="dark"] .composer-tools .composer-emoji-picker button:hover {
+  background: #303e32;
 }
 
 :root[data-theme="dark"] .composer-top textarea,
@@ -448,6 +460,10 @@
 
 :root[data-theme="dark"] .avatar-profile {
   border-color: #212a23;
+}
+
+:root[data-theme="dark"] .profile-photo-button {
+  color: #b0c9ad;
 }
 
 :root[data-theme="dark"] .profile-completion {

@@ -145,7 +145,7 @@ export default function DiscoverPage() {
                 return (
                   <article className="discover-person-card" key={person.name}>
                     <span className="discover-person-decoration" />
-                    <Avatar initials={person.initials} tone={person.tone} size="large" />
+                    <Avatar initials={person.initials} imageUrl={person.profilePhotoUrl} tone={person.tone} size="large" />
                     <h2>{person.name}</h2><p>{person.role}</p>
                     <span className="discover-mutuals">{person.headline || 'A member of Nexora'}</span>
                     <button className={connected || pending || requestedYou ? 'discover-connect connected' : 'discover-connect'} disabled={connected || pending || requestedYou} onClick={() => requestConnection(person.id)}>

@@ -8,6 +8,7 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RequestPart;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
@@ -41,8 +42,9 @@ public class PostController {
     }
 
     @GetMapping("/feed")
-    public ResponseEntity<List<PostDto>> getFeed() {
-        return ResponseEntity.ok(postService.getFeed());
+    public ResponseEntity<List<PostDto>> getFeed(
+            @RequestParam(defaultValue = "for-you") String scope) {
+        return ResponseEntity.ok(postService.getFeed(scope));
     }
 
     @GetMapping("/users/{userId}/allPosts")

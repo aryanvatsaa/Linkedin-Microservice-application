@@ -25,7 +25,8 @@ public class UserServiceConsumer {
 
     @KafkaListener(topics = "user_updated_topic")
     public void handlePersonUpdated(UserUpdatedEvent event) {
-        personService.updatePerson(event.getUserId(), event.getName(), event.getHeadline());
+        personService.updatePerson(
+                event.getUserId(), event.getName(), event.getHeadline(), event.getProfilePhotoUrl());
     }
 
 }

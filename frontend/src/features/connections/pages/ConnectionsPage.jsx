@@ -13,6 +13,7 @@ function mapPerson(person) {
     id: person.userId,
     name,
     initials: name.split(/\s+/).slice(0, 2).map((part) => part[0]).join('').toUpperCase(),
+    profilePhotoUrl: person.profilePhotoUrl,
     tone: 'sage',
     role: person.headline || 'Nexora member',
     mutuals: '',
@@ -97,7 +98,7 @@ export default function ConnectionsPage() {
               <div className="connection-request-list">
                 {requests.map((person) => (
                   <article className="connection-request" key={person.id}>
-                    <Avatar initials={person.initials} tone={person.tone} size="large" />
+                    <Avatar initials={person.initials} imageUrl={person.profilePhotoUrl} tone={person.tone} size="large" />
                     <div className="connection-person-copy">
                       <strong>{person.name}</strong><span>{person.role}</span>
                     </div>
@@ -122,7 +123,7 @@ export default function ConnectionsPage() {
               <div className="connection-grid">
                 {filteredConnections.map((person) => (
                   <article className="person-tile" key={person.id}>
-                    <Avatar initials={person.initials} tone={person.tone} size="large" />
+                    <Avatar initials={person.initials} imageUrl={person.profilePhotoUrl} tone={person.tone} size="large" />
                     <div><strong>{person.name}</strong><span>{person.role}</span></div>
                     <span className="person-profile-link" aria-hidden="true"><Icon name="arrow" size={16} /></span>
                   </article>

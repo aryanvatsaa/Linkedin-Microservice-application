@@ -1,7 +1,7 @@
 import apiClient from '../../../api/apiClient'
 
-export async function getFeed() {
-  const { data } = await apiClient.get('/posts/core/feed')
+export async function getFeed(scope = 'for-you') {
+  const { data } = await apiClient.get('/posts/core/feed', { params: { scope } })
   return data
 }
 

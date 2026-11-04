@@ -94,6 +94,32 @@
   margin-top: -28px;
 }
 
+.profile-photo-control {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 5px;
+}
+
+.profile-photo-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  color: #58715b;
+  cursor: pointer;
+  font-size: 9px;
+  font-weight: 600;
+}
+
+.profile-photo-button input {
+  display: none;
+}
+
+.profile-photo-button.is-uploading {
+  cursor: wait;
+  opacity: 0.7;
+}
+
 .avatar-profile {
   width: 72px;
   height: 72px;

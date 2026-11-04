@@ -103,7 +103,17 @@ public class PostService {
             .collect(Collectors.toList());
     }
 
-    public List<PostDto> getFeed() {
+    public List<PostDto> getFeed(String scope) {
+        if ("for-you".equals(scope)) {
+            return postRepository.findAllByOrderByCreatedAtDesc()
+                    .stream()
+                    .map(this::toDto)
+                    .collect(Collectors.toList());
+        }
+        if (!"connections".equals(scope)) {
+            throw new BadRequestException("Feed scope must be for-you or connections");
+        }
+
         Long currentUserId = AuthContextHolder.getCurrentUserId();
         List<PersonDto> connections = connectionsServiceClient.getFirstDegreeConnections(currentUserId);
         if (connections == null) {

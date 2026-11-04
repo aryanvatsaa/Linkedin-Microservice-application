@@ -22,6 +22,7 @@ export function formatComment(comment, user, directory = []) {
     ...comment,
     name,
     initials: name.split(/\s+/).slice(0, 2).map((part) => part[0]).join('').toUpperCase(),
+    imageUrl: isOwnComment ? user.profilePhotoUrl : author?.profilePhotoUrl,
     tone: 'sage',
     text: comment.content || '',
   }
@@ -33,13 +34,15 @@ export function formatPost(post, user, directory = []) {
   const name = isOwnPost ? user.name : post.authorName || author?.name || `Nexora member ${post.userId}`
   const initials = name.split(/\s+/).slice(0, 2).map((part) => part[0]).join('').toUpperCase()
   const commentItems = (post.commentItems ?? []).map((comment) => formatComment(comment, user, directory))
+  const headline = isOwnPost ? user.headline : post.authorHeadline || author?.headline
   return {
     ...post,
     id: String(post.id),
     name,
     initials,
+    imageUrl: isOwnPost ? user.profilePhotoUrl : author?.profilePhotoUrl,
     tone: 'sage',
-    role: isOwnPost ? user.headline || 'Your community' : post.authorHeadline || 'In your community',
+    role: headline || (isOwnPost ? 'Your community' : 'In your community'),
     time: formatPostTime(post.createdAt),
     content: post.content || '',
     likes: post.likes || 0,

@@ -12,7 +12,7 @@ export default function AppSidebar() {
   return (
     <aside className="app-sidebar">
       <Link to="/profile" className="sidebar-profile">
-        <Avatar initials={initials} tone="sage" size="large" />
+        <Avatar initials={initials} imageUrl={user.profilePhotoUrl} tone="sage" size="large" />
         <div><strong>{user.name}</strong><span>{user.email}</span></div>
         <Icon name="chevron" size={16} />
       </Link>

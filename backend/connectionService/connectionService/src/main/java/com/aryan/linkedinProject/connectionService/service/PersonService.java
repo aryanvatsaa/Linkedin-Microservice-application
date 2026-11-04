@@ -24,17 +24,19 @@ public class PersonService {
         personRepository.save(person);
     }
 
-    public void updatePerson(Long userId, String name, String headline) {
+    public void updatePerson(Long userId, String name, String headline, String profilePhotoUrl) {
         Person person = personRepository.findByUserId(userId)
                 .map(existing -> {
                     existing.setName(name);
                     existing.setHeadline(headline);
+                    existing.setProfilePhotoUrl(profilePhotoUrl);
                     return existing;
                 })
                 .orElseGet(() -> Person.builder()
                         .userId(userId)
                         .name(name)
                         .headline(headline)
+                        .profilePhotoUrl(profilePhotoUrl)
                         .build());
         personRepository.save(person);
     }

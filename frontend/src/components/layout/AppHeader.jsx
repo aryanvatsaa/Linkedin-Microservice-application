@@ -21,7 +21,7 @@ export default function AppHeader() {
         <nav className="app-header-actions" aria-label="Account navigation">
           <ThemeToggle />
           <Link className="header-icon-button" to="/notifications" aria-label="Notifications"><Icon name="bell" /></Link>
-          <Avatar initials={initials} tone="sage" size="small" />
+          <Avatar initials={initials} imageUrl={user.profilePhotoUrl} tone="sage" size="small" />
         </nav>
       </div>
     </header>

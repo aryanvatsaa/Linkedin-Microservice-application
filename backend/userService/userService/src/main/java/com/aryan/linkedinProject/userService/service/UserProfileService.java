@@ -10,6 +10,7 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.kafka.core.KafkaTemplate;
 
 import com.aryan.linkedinProject.userService.dto.ProfileUpdateDto;
+import com.aryan.linkedinProject.userService.dto.ProfilePhotoUpdateDto;
 import com.aryan.linkedinProject.userService.dto.PublicUserDto;
 import com.aryan.linkedinProject.userService.dto.UserDto;
 import com.aryan.linkedinProject.userService.entity.User;
@@ -52,6 +53,20 @@ public class UserProfileService {
                 .userId(user.getId())
                 .name(user.getName())
                 .headline(user.getHeadline())
+                .profilePhotoUrl(user.getProfilePhotoUrl())
+                .build());
+        return toUserDto(user);
+    }
+
+    @Transactional
+    public UserDto updateProfilePhoto(Long userId, ProfilePhotoUpdateDto update) {
+        User user = findUser(userId);
+        user.setProfilePhotoUrl(update.getProfilePhotoUrl().trim());
+        userUpdatedEventKafkaTemplate.send("user_updated_topic", UserUpdatedEvent.builder()
+                .userId(user.getId())
+                .name(user.getName())
+                .headline(user.getHeadline())
+                .profilePhotoUrl(user.getProfilePhotoUrl())
                 .build());
         return toUserDto(user);
     }
@@ -60,7 +75,8 @@ public class UserProfileService {
     public List<PublicUserDto> getDirectory(Long excludedUserId) {
         return userRepository.findAll().stream()
                 .filter(user -> !user.getId().equals(excludedUserId))
-                .map(user -> new PublicUserDto(user.getId(), user.getName(), user.getHeadline()))
+                .map(user -> new PublicUserDto(
+                        user.getId(), user.getName(), user.getHeadline(), user.getProfilePhotoUrl()))
                 .toList();
     }
 
@@ -77,6 +93,7 @@ public class UserProfileService {
         dto.setHeadline(user.getHeadline());
         dto.setAbout(user.getAbout());
         dto.setLocation(user.getLocation());
+        dto.setProfilePhotoUrl(user.getProfilePhotoUrl());
         dto.setInterests(List.copyOf(user.getInterests()));
         return dto;
     }

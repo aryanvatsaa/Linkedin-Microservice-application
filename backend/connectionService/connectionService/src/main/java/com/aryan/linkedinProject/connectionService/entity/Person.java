@@ -24,5 +24,7 @@ public class Person {
 
     private String headline;
 
+    private String profilePhotoUrl;
+
     
 }

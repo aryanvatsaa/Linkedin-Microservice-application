@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { Link } from 'react-router'
 import AppHeader from '../../../components/layout/AppHeader'
 import AppSidebar from '../../../components/layout/AppSidebar'
@@ -8,9 +8,11 @@ import PostCard from '../components/PostCard'
 import { getConnections, getOutgoingRequests, sendConnectionRequest } from '../../discover/data/discoverApi'
 import { useFeed } from '../data/useFeed'
 import { useAuth } from '../../auth/data/useAuth'
-import { createComment, createPost, setPostLiked, setPostSaved } from '../data/postsApi'
+import { createComment, createPost, getFeed, setPostLiked, setPostSaved } from '../data/postsApi'
 import { formatComment, formatPost } from '../data/postFormatting'
 import { useToast } from '../../../app/useToast'
+
+const CELEBRATION_EMOJIS = ['🎉', '👏', '🙌', '🎊', '🥳', '💐', '✨', '❤️', '😊', '🚀', '🌟', '💡']
 
 export default function HomePage() {
   const { posts, setPosts, isLoading, loadError, setLoadError, directory } = useFeed()
@@ -22,6 +24,11 @@ export default function HomePage() {
   const [composerError, setComposerError] = useState('')
   const [suggestedPeople, setSuggestedPeople] = useState([])
   const [connectionError, setConnectionError] = useState('')
+  const [feedScope, setFeedScope] = useState('for-you')
+  const [isSwitchingFeed, setIsSwitchingFeed] = useState(false)
+  const [isEmojiPickerOpen, setIsEmojiPickerOpen] = useState(false)
+  const textareaRef = useRef(null)
+  const cursorPositionRef = useRef(0)
 
   useEffect(() => {
     let active = true
@@ -66,6 +73,33 @@ export default function HomePage() {
       setComposerError(message)
       notify(message, 'error')
     }
+  }
+
+  async function changeFeedScope(scope) {
+    if (scope === feedScope || isSwitchingFeed) return
+    setLoadError('')
+    setIsSwitchingFeed(true)
+    try {
+      const items = await getFeed(scope)
+      setPosts(items.map((post) => formatPost(post, user, directory)))
+      setFeedScope(scope)
+    } catch (error) {
+      setLoadError(error.response?.data?.error || error.response?.data?.message || 'Could not change your feed. Please try again.')
+    } finally {
+      setIsSwitchingFeed(false)
+    }
+  }
+
+  function addCelebrationEmoji(emoji) {
+    const position = Math.min(cursorPositionRef.current, draft.length)
+    const nextDraft = `${draft.slice(0, position)}${emoji}${draft.slice(position)}`
+    setDraft(nextDraft)
+    cursorPositionRef.current = position + emoji.length
+    setIsEmojiPickerOpen(false)
+    requestAnimationFrame(() => {
+      textareaRef.current?.focus()
+      textareaRef.current?.setSelectionRange(cursorPositionRef.current, cursorPositionRef.current)
+    })
   }
 
   async function toggleLike(postId) {
@@ -175,17 +209,25 @@ export default function HomePage() {
         <main className="feed-column" id="feed-composer">
           <div className="feed-heading">
             <div><span className="section-kicker">YOUR LITTLE CORNER OF NEXORA</span><h1>Your community</h1></div>
-            <button className="feed-filter">For you <span>⌄</span></button>
+            <div className="feed-filter" role="group" aria-label="Choose which posts to see">
+              <button type="button" aria-pressed={feedScope === 'for-you'} disabled={isSwitchingFeed} onClick={() => changeFeedScope('for-you')}>For you</button>
+              <button type="button" aria-pressed={feedScope === 'connections'} disabled={isSwitchingFeed} onClick={() => changeFeedScope('connections')}>Connections</button>
+            </div>
           </div>
           <form className="composer-card" onSubmit={publishPost}>
             <div className="composer-top">
-              <Avatar initials={user.name.split(/\s+/).slice(0, 2).map((part) => part[0]).join('').toUpperCase()} tone="sage" />
+              <Avatar initials={user.name.split(/\s+/).slice(0, 2).map((part) => part[0]).join('').toUpperCase()} imageUrl={user.profilePhotoUrl} tone="sage" />
               <label className="sr-only" htmlFor="post-draft">Share an idea with your community</label>
               <textarea
                 id="post-draft"
+                ref={textareaRef}
                 placeholder={`What’s on your mind, ${user.name.split(' ')[0]}?`}
                 value={draft}
-                onChange={(event) => setDraft(event.target.value)}
+                onChange={(event) => {
+                  setDraft(event.target.value)
+                  cursorPositionRef.current = event.target.selectionStart
+                }}
+                onSelect={(event) => { cursorPositionRef.current = event.target.selectionStart }}
                 rows="2"
               />
             </div>
@@ -202,7 +244,25 @@ export default function HomePage() {
                   <Icon name="image" size={18} /> Photo
                   <input type="file" accept="image/*" onChange={attachImage} />
                 </label>
-                <button type="button"><Icon name="sparkle" size={18} /> Celebrate</button>
+                <div className="composer-emoji-tool">
+                  <button
+                    type="button"
+                    aria-expanded={isEmojiPickerOpen}
+                    aria-controls={isEmojiPickerOpen ? 'celebration-emoji-picker' : undefined}
+                    onClick={() => setIsEmojiPickerOpen((open) => !open)}
+                  >
+                    <Icon name="sparkle" size={18} /> Celebrate
+                  </button>
+                  {isEmojiPickerOpen && (
+                    <div className="composer-emoji-picker" id="celebration-emoji-picker" role="group" aria-label="Choose an emoji">
+                      {CELEBRATION_EMOJIS.map((emoji) => (
+                        <button key={emoji} type="button" onClick={() => addCelebrationEmoji(emoji)} aria-label={`Add ${emoji} emoji`}>
+                          {emoji}
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
               </div>
               <button className="button button-dark composer-submit" type="submit" disabled={!draft.trim() && !imagePreviewUrl}>
                 Share <Icon name="arrow" size={15} />
@@ -213,7 +273,8 @@ export default function HomePage() {
           <div className="feed-notice"><span><Icon name="sparkle" size={15} /></span> A little inspiration from your corner of Nexora</div>
           <div className="posts-list">
             {isLoading && <p role="status">Loading your community posts…</p>}
-            {!isLoading && !loadError && posts.length === 0 && (
+            {isSwitchingFeed && <p role="status">Loading {feedScope === 'for-you' ? 'your community' : 'your connections'} posts…</p>}
+            {!isLoading && !isSwitchingFeed && !loadError && posts.length === 0 && (
               <p className="feed-notice">No posts yet. Share the first thought with your community.</p>
             )}
             {posts.map((post) => (
@@ -242,7 +303,7 @@ export default function HomePage() {
             {connectionError && <p className="composer-error" role="alert">{connectionError}</p>}
             {suggestedPeople.map((person) => (
               <div className="suggested-person" key={person.name}>
-                <Avatar initials={person.initials} tone={person.tone} />
+                <Avatar initials={person.initials} imageUrl={person.profilePhotoUrl} tone={person.tone} />
                 <div className="suggested-info"><strong>{person.name}</strong><span>{person.role}</span></div>
                 <button
                   className="connect-button"

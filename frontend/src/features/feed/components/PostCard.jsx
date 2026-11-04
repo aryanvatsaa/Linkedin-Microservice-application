@@ -92,7 +92,7 @@ export default function PostCard({ post, onToggleLike, onToggleSave, onAddCommen
   return (
     <article className="feed-post" id={post.id}>
       <div className="post-author-row">
-        <Avatar initials={post.initials} tone={post.tone} />
+        <Avatar initials={post.initials} imageUrl={post.imageUrl} tone={post.tone} />
         <div className="post-author-info">
           <strong>{post.name}</strong>
           <span>{post.role}</span>
@@ -133,7 +133,7 @@ export default function PostCard({ post, onToggleLike, onToggleSave, onAddCommen
         <section className="post-comments" aria-label="Comments">
           {comments.map((comment) => (
             <div className="post-comment" key={comment.id}>
-              <Avatar initials={comment.initials} tone={comment.tone} size="small" />
+              <Avatar initials={comment.initials} imageUrl={comment.imageUrl} tone={comment.tone} size="small" />
               <p><strong>{comment.name}</strong><span>{comment.text}</span></p>
             </div>
           ))}

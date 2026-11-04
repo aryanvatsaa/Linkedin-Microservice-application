@@ -4,6 +4,7 @@ import java.util.List;
 
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestHeader;
@@ -11,6 +12,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.aryan.linkedinProject.userService.dto.ProfileUpdateDto;
+import com.aryan.linkedinProject.userService.dto.ProfilePhotoUpdateDto;
 import com.aryan.linkedinProject.userService.dto.PublicUserDto;
 import com.aryan.linkedinProject.userService.dto.UserDto;
 import com.aryan.linkedinProject.userService.service.UserProfileService;
@@ -35,6 +37,13 @@ public class ProfileController {
             @RequestHeader("X-User-Id") Long userId,
             @Valid @RequestBody ProfileUpdateDto update) {
         return ResponseEntity.ok(userProfileService.updateProfile(userId, update));
+    }
+
+    @PatchMapping("/profile/photo")
+    public ResponseEntity<UserDto> updateProfilePhoto(
+            @RequestHeader("X-User-Id") Long userId,
+            @Valid @RequestBody ProfilePhotoUpdateDto update) {
+        return ResponseEntity.ok(userProfileService.updateProfilePhoto(userId, update));
     }
 
     @GetMapping("/directory")

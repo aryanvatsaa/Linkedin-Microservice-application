@@ -10,4 +10,5 @@ public class PublicUserDto {
     private Long id;
     private String name;
     private String headline;
+    private String profilePhotoUrl;
 }
