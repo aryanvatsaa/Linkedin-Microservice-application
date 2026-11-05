@@ -11,7 +11,7 @@ import {
   getOutgoingRequests,
   sendConnectionRequest,
 } from '../data/discoverApi'
-import { createComment, setPostLiked, setPostSaved } from '../../feed/data/postsApi'
+import { createComment, deletePost as deletePostRequest, setPostLiked, setPostSaved } from '../../feed/data/postsApi'
 import { formatComment } from '../../feed/data/postFormatting'
 import { useAuth } from '../../auth/data/useAuth'
 import { useToast } from '../../../app/useToast'
@@ -120,6 +120,17 @@ export default function DiscoverPage() {
     }
   }
 
+  async function deleteOwnPost(postId) {
+    try {
+      await deletePostRequest(postId)
+      setPosts((current) => current.filter((post) => post.id !== postId))
+      return true
+    } catch (requestError) {
+      setError(requestError.response?.data?.error || requestError.response?.data?.message || 'Your post could not be deleted. Please try again.')
+      return false
+    }
+  }
+
   return (
     <div className="app-shell">
       <AppHeader />
@@ -164,6 +175,7 @@ export default function DiscoverPage() {
                   onToggleLike={toggleLike}
                   onToggleSave={toggleSave}
                   onAddComment={addComment}
+                  onDelete={deleteOwnPost}
                 />
               )) : <div className="social-empty"><strong>No posts found</strong><p>Try another search to find a conversation.</p></div>}
             </section>

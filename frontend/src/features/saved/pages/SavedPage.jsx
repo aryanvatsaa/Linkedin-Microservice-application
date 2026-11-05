@@ -4,7 +4,7 @@ import AppSidebar from '../../../components/layout/AppSidebar'
 import { Icon } from '../../../components/ui/Icon'
 import PostCard from '../../feed/components/PostCard'
 import { useFeed } from '../../feed/data/useFeed'
-import { createComment, getSavedPosts, setPostLiked, setPostSaved } from '../../feed/data/postsApi'
+import { createComment, deletePost as deletePostRequest, getSavedPosts, setPostLiked, setPostSaved } from '../../feed/data/postsApi'
 import { formatComment, formatPost } from '../../feed/data/postFormatting'
 import { useAuth } from '../../auth/data/useAuth'
 
@@ -44,6 +44,18 @@ export default function SavedPage() {
     }
     updatePosts(postId, { saved: false })
     return true
+  }
+
+  async function deleteOwnPost(postId) {
+    try {
+      await deletePostRequest(postId)
+      setSavedPosts((current) => current.filter((post) => post.id !== postId))
+      setPosts((current) => current.filter((post) => post.id !== postId))
+      return true
+    } catch (requestError) {
+      setError(requestError.response?.data?.error || requestError.response?.data?.message || 'Your post could not be deleted. Please try again.')
+      return false
+    }
   }
 
   async function toggleLike(postId) {
@@ -96,6 +108,7 @@ export default function SavedPage() {
                   onToggleLike={toggleLike}
                   onToggleSave={removeSavedPost}
                   onAddComment={addComment}
+                  onDelete={deleteOwnPost}
                 />
               ))}
             </section>

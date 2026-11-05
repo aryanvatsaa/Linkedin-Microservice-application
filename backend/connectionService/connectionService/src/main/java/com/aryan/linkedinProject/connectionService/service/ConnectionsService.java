@@ -131,6 +131,22 @@ public class ConnectionsService {
                 receiverId);
     }
 
+    public void removeConnection(Long connectionUserId) {
+        Long currentUserId = AuthContextHolder.getCurrentUserId();
+        if (currentUserId == null) {
+            throw new BadRequestException("Authentication is required");
+        }
+        if (currentUserId.equals(connectionUserId)) {
+            throw new BadRequestException("You cannot remove yourself as a connection");
+        }
+        if (!personRepository.alreadyConnected(currentUserId, connectionUserId)) {
+            throw new BadRequestException("No connection exists with this user");
+        }
+
+        personRepository.removeConnection(currentUserId, connectionUserId);
+        log.info("Removed connection between userId: {} and userId: {}", currentUserId, connectionUserId);
+    }
+
 
 
 }

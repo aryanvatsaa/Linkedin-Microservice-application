@@ -17,3 +17,7 @@ export async function acceptConnectionRequest(userId) {
 export async function rejectConnectionRequest(userId) {
   await apiClient.post(`/connections/core/reject/${userId}`)
 }
+
+export async function removeConnection(userId) {
+  await apiClient.delete(`/connections/core/${userId}`)
+}

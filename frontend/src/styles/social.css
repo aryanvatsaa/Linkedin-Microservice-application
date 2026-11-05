@@ -231,6 +231,22 @@
   color: #708074;
 }
 
+.connection-remove-button {
+  flex-shrink: 0;
+  padding: 6px 8px;
+  border: 1px solid #eadbd7;
+  border-radius: 5px;
+  background: #fffaf8;
+  color: #a45e50;
+  cursor: pointer;
+  font-size: 8px;
+  font-weight: 600;
+}
+
+.connection-remove-button:hover {
+  background: #f8ece8;
+}
+
 .social-no-results {
   margin: 12px 0 0;
   color: #879188;

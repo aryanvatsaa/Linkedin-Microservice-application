@@ -14,6 +14,10 @@ export async function createPost(content, file) {
   return data
 }
 
+export async function deletePost(postId) {
+  await apiClient.delete(`/posts/core/${postId}`)
+}
+
 export async function setPostLiked(postId, liked) {
   const method = liked ? 'post' : 'delete'
   await apiClient[method](`/posts/likes/${postId}`)

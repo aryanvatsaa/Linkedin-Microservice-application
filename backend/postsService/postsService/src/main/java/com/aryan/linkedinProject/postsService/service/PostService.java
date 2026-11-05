@@ -12,6 +12,7 @@ import org.modelmapper.ModelMapper;
 import org.springframework.http.ResponseEntity;
 import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
 import com.aryan.linkedinProject.postsService.auth.AuthContextHolder;
@@ -93,6 +94,25 @@ public class PostService {
 
         Post post = postRepository.findById(postId).orElseThrow(() -> new ResourceNotFoundException("Post not found with ID: "+postId));
         return toDto(post);
+    }
+
+    @Transactional
+    public void deletePost(Long postId) {
+        Long currentUserId = AuthContextHolder.getCurrentUserId();
+        if (currentUserId == null) {
+            throw new BadRequestException("Authentication is required");
+        }
+
+        Post post = postRepository.findById(postId)
+                .orElseThrow(() -> new ResourceNotFoundException("Post not found"));
+        if (!currentUserId.equals(post.getUserId())) {
+            throw new ResourceNotFoundException("Post not found");
+        }
+
+        postCommentRepository.deleteByPostId(postId);
+        postLikeRepository.deleteByPostId(postId);
+        savedPostRepository.deleteByPostId(postId);
+        postRepository.delete(post);
     }
 
     public List<PostDto> getAllPostsOfUser(Long userId) {

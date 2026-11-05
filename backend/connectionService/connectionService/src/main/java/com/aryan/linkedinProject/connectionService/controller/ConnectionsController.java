@@ -4,6 +4,7 @@ import java.util.List;
 
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -62,6 +63,12 @@ public class ConnectionsController {
     @PostMapping("/reject/{userId}")
     public ResponseEntity<Void> rejectConnectionRequest(@PathVariable Long userId) {
         connectionsService.rejectConnectionRequest(userId);
+        return ResponseEntity.noContent().build();
+    }
+
+    @DeleteMapping("/{userId}")
+    public ResponseEntity<Void> removeConnection(@PathVariable Long userId) {
+        connectionsService.removeConnection(userId);
         return ResponseEntity.noContent().build();
     }
 

@@ -2,9 +2,11 @@ import { useEffect, useState } from 'react'
 import { Avatar } from '../../../components/ui/Avatar'
 import { Icon } from '../../../components/ui/Icon'
 import { useToast } from '../../../app/useToast'
+import { useAuth } from '../../auth/data/useAuth'
 import { formatPostTime } from '../data/postFormatting'
 
-export default function PostCard({ post, onToggleLike, onToggleSave, onAddComment }) {
+export default function PostCard({ post, onToggleLike, onToggleSave, onAddComment, onDelete }) {
+  const { user } = useAuth()
   const notify = useToast()
   const [now, setNow] = useState(0)
   const [commentsOpen, setCommentsOpen] = useState(false)
@@ -65,6 +67,21 @@ export default function PostCard({ post, onToggleLike, onToggleSave, onAddCommen
     }
   }
 
+  async function removePost() {
+    if (!window.confirm('Delete this post? This action cannot be undone.')) return
+
+    notify('Deleting your post…', 'loading')
+    try {
+      const succeeded = await onDelete?.(post.id)
+      notify(succeeded === false
+        ? 'Your post could not be deleted. Please try again.'
+        : 'Your post was deleted.',
+      succeeded === false ? 'error' : 'success')
+    } catch {
+      notify('Your post could not be deleted. Please try again.', 'error')
+    }
+  }
+
   async function sharePost() {
     const url = `${window.location.origin}/home#${encodeURIComponent(post.id)}`
 
@@ -98,7 +115,11 @@ export default function PostCard({ post, onToggleLike, onToggleSave, onAddCommen
           <span>{post.role}</span>
           <span>{postTime} <span className="post-dot">·</span> <Icon name="globe" size={12} /></span>
         </div>
-        <button className="post-more" aria-label={`More options for ${post.name}'s post`}>···</button>
+        {onDelete && Number(post.userId) === Number(user?.id) ? (
+          <button className="post-delete-button" onClick={removePost} aria-label="Delete your post">Delete</button>
+        ) : (
+          <button className="post-more" aria-label={`More options for ${post.name}'s post`}>···</button>
+        )}
       </div>
       <p className="post-content">{post.content}</p>
       {post.art && (

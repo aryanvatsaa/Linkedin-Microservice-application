@@ -546,6 +546,22 @@
   line-height: 1;
 }
 
+.post-delete-button {
+  align-self: flex-start;
+  padding: 5px 8px;
+  border: 1px solid #eadbd7;
+  border-radius: 5px;
+  background: #fffaf8;
+  color: #a45e50;
+  cursor: pointer;
+  font-size: 8px;
+  font-weight: 600;
+}
+
+.post-delete-button:hover {
+  background: #f8ece8;
+}
+
 .post-content {
   margin: 14px 0 13px;
   color: #566158;

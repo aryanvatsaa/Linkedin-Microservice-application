@@ -4,7 +4,7 @@ import AppHeader from '../../../components/layout/AppHeader'
 import AppSidebar from '../../../components/layout/AppSidebar'
 import { Avatar } from '../../../components/ui/Avatar'
 import { Icon } from '../../../components/ui/Icon'
-import { acceptConnectionRequest, getConnections, getIncomingRequests, rejectConnectionRequest } from '../data/connectionsApi'
+import { acceptConnectionRequest, getConnections, getIncomingRequests, rejectConnectionRequest, removeConnection as removeConnectionRequest } from '../data/connectionsApi'
 import { useToast } from '../../../app/useToast'
 
 function mapPerson(person) {
@@ -73,6 +73,21 @@ export default function ConnectionsPage() {
     }
   }
 
+  async function removeConnection(person) {
+    if (!window.confirm(`Remove ${person.name} from your connections?`)) return
+
+    notify(`Removing ${person.name} from your connections…`, 'loading')
+    try {
+      await removeConnectionRequest(person.id)
+      setConnections((current) => current.filter((item) => item.id !== person.id))
+      notify(`${person.name} was removed from your connections.`)
+    } catch (requestError) {
+      const message = requestError.response?.data?.error || 'Could not remove this connection.'
+      setError(message)
+      notify(message, 'error')
+    }
+  }
+
   const filteredConnections = connections.filter((person) =>
     `${person.name} ${person.role}`.toLowerCase().includes(query.toLowerCase()),
   )
@@ -126,6 +141,9 @@ export default function ConnectionsPage() {
                     <Avatar initials={person.initials} imageUrl={person.profilePhotoUrl} tone={person.tone} size="large" />
                     <div><strong>{person.name}</strong><span>{person.role}</span></div>
                     <span className="person-profile-link" aria-hidden="true"><Icon name="arrow" size={16} /></span>
+                    <button className="connection-remove-button" onClick={() => removeConnection(person)} aria-label={`Remove ${person.name} from your connections`}>
+                      Remove
+                    </button>
                   </article>
                 ))}
               </div>

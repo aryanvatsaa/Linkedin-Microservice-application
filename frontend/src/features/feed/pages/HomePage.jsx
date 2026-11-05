@@ -8,7 +8,7 @@ import PostCard from '../components/PostCard'
 import { getConnections, getOutgoingRequests, sendConnectionRequest } from '../../discover/data/discoverApi'
 import { useFeed } from '../data/useFeed'
 import { useAuth } from '../../auth/data/useAuth'
-import { createComment, createPost, getFeed, setPostLiked, setPostSaved } from '../data/postsApi'
+import { createComment, createPost, deletePost as deletePostRequest, getFeed, setPostLiked, setPostSaved } from '../data/postsApi'
 import { formatComment, formatPost } from '../data/postFormatting'
 import { useToast } from '../../../app/useToast'
 
@@ -152,6 +152,17 @@ export default function HomePage() {
     }
   }
 
+  async function deleteOwnPost(postId) {
+    try {
+      await deletePostRequest(postId)
+      setPosts((currentPosts) => currentPosts.filter((post) => post.id !== postId))
+      return true
+    } catch (error) {
+      setLoadError(error.response?.data?.error || error.response?.data?.message || 'Your post could not be deleted. Please try again.')
+      return false
+    }
+  }
+
   function attachImage(event) {
     const [file] = event.target.files ?? []
     if (!file) return
@@ -284,6 +295,7 @@ export default function HomePage() {
                 onToggleLike={toggleLike}
                 onToggleSave={toggleSave}
                 onAddComment={addComment}
+                onDelete={deleteOwnPost}
               />
             ))}
           </div>

@@ -9,7 +9,7 @@ import { useAuth } from '../../auth/data/useAuth'
 import { useFeed } from '../../feed/data/useFeed'
 import { getProfile, updateProfile, updateProfilePhoto, uploadProfilePhoto } from '../data/profileApi'
 import { getConnections } from '../../connections/data/connectionsApi'
-import { createComment, setPostLiked } from '../../feed/data/postsApi'
+import { createComment, deletePost as deletePostRequest, setPostLiked } from '../../feed/data/postsApi'
 import { formatComment } from '../../feed/data/postFormatting'
 import { useToast } from '../../../app/useToast'
 
@@ -171,6 +171,17 @@ export default function ProfilePage() {
     }
   }
 
+  async function deleteOwnPost(postId) {
+    try {
+      await deletePostRequest(postId)
+      setPosts((currentPosts) => currentPosts.filter((post) => post.id !== postId))
+      return true
+    } catch (requestError) {
+      setError(requestError.response?.data?.error || requestError.response?.data?.message || 'Your post could not be deleted. Please try again.')
+      return false
+    }
+  }
+
   return (
     <div className="app-shell">
       <AppHeader />
@@ -282,7 +293,7 @@ export default function ProfilePage() {
                   <div><span className="section-kicker">NOTES FROM MY CORNER</span><h2>Recent activity</h2></div>
                   <span className="profile-post-count">{profilePosts.length} posts</span>
                 </div>
-                {profilePosts.map((post) => <PostCard key={post.id} post={post} onToggleLike={toggleLike} onAddComment={addComment} />)}
+                {profilePosts.map((post) => <PostCard key={post.id} post={post} onToggleLike={toggleLike} onAddComment={addComment} onDelete={deleteOwnPost} />)}
                 {!profilePosts.length && <p className="social-no-results">Your shared posts will appear here.</p>}
               </section>
             </>
