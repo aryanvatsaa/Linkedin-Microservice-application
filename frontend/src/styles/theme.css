@@ -232,6 +232,7 @@
 :root[data-theme="dark"] .app-header {
   border-color: #303a33;
   background: #1d251f;
+  box-shadow: 0 3px 14px #080b0914;
 }
 
 :root[data-theme="dark"] .app-search,
@@ -248,6 +249,65 @@
 :root[data-theme="dark"] .app-search input::placeholder,
 :root[data-theme="dark"] .app-search kbd {
   color: #97a399;
+}
+
+:root[data-theme="dark"] .app-search:focus-within {
+  border-color: #536b55;
+  background: #202a22;
+  box-shadow: 0 0 0 3px #8eaf8918;
+}
+
+:root[data-theme="dark"] .header-profile-trigger:hover,
+:root[data-theme="dark"] .header-profile-trigger[aria-expanded="true"] {
+  border-color: #465547;
+  background: #29352b;
+}
+
+:root[data-theme="dark"] .header-profile-popover {
+  border-color: #3b473d;
+  background: #222b24;
+  box-shadow: 0 18px 48px #080b093d, 0 3px 10px #080b091c;
+  color: #c2cec3;
+}
+
+:root[data-theme="dark"] .profile-popover-identity {
+  border-color: #39443b;
+}
+
+:root[data-theme="dark"] .profile-popover-identity strong {
+  color: #dce5dc;
+}
+
+:root[data-theme="dark"] .profile-popover-identity > div > span,
+:root[data-theme="dark"] .profile-popover-location,
+:root[data-theme="dark"] .profile-popover-about,
+:root[data-theme="dark"] .profile-popover-status {
+  color: #aab6ab;
+}
+
+:root[data-theme="dark"] .profile-popover-error {
+  color: #e5a099;
+}
+
+:root[data-theme="dark"] .profile-popover-label {
+  color: #a0ada1;
+}
+
+:root[data-theme="dark"] .profile-popover-tags span {
+  border-color: #3c493e;
+  background: #2a352c;
+  color: #c0d0bb;
+}
+
+:root[data-theme="dark"] .profile-popover-link {
+  border-color: #465447;
+  background: #29342b;
+  color: #c0d3bc;
+}
+
+:root[data-theme="dark"] .profile-popover-link:hover {
+  border-color: #5b705b;
+  background: #334335;
 }
 
 :root[data-theme="dark"] .header-icon-button,
