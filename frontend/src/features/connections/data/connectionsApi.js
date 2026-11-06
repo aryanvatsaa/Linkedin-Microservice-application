@@ -10,6 +10,15 @@ export async function getIncomingRequests() {
   return data
 }
 
+export async function getOutgoingRequests() {
+  const { data } = await apiClient.get('/connections/core/requests/outgoing')
+  return data
+}
+
+export async function cancelOutgoingRequest(userId) {
+  await apiClient.delete(`/connections/core/requests/outgoing/${userId}`)
+}
+
 export async function acceptConnectionRequest(userId) {
   await apiClient.post(`/connections/core/accept/${userId}`)
 }

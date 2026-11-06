@@ -9,6 +9,10 @@ import java.util.Set;
 import java.util.stream.Collectors;
 
 import org.modelmapper.ModelMapper;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.http.ResponseEntity;
 import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.stereotype.Service;
@@ -21,6 +25,8 @@ import com.aryan.linkedinProject.postsService.client.UploaderServiceClient;
 import com.aryan.linkedinProject.postsService.dto.PersonDto;
 import com.aryan.linkedinProject.postsService.dto.PostCreateRequestDto;
 import com.aryan.linkedinProject.postsService.dto.PostDto;
+import com.aryan.linkedinProject.postsService.dto.PostFeedPageDto;
+import com.aryan.linkedinProject.postsService.dto.PostUpdateRequestDto;
 import com.aryan.linkedinProject.postsService.dto.PostCommentDto;
 import com.aryan.linkedinProject.postsService.entity.Post;
 import com.aryan.linkedinProject.postsService.entity.SavedPost;
@@ -97,6 +103,27 @@ public class PostService {
     }
 
     @Transactional
+    public PostDto updatePost(Long postId, PostUpdateRequestDto request) {
+        Long currentUserId = AuthContextHolder.getCurrentUserId();
+        if (currentUserId == null) {
+            throw new BadRequestException("Authentication is required");
+        }
+
+        Post post = postRepository.findById(postId)
+                .orElseThrow(() -> new ResourceNotFoundException("Post not found"));
+        if (!currentUserId.equals(post.getUserId())) {
+            throw new ResourceNotFoundException("Post not found");
+        }
+
+        String content = request.getContent().trim();
+        if (content.isEmpty()) {
+            throw new BadRequestException("A post cannot be empty");
+        }
+        post.setContent(content);
+        return toDto(postRepository.save(post));
+    }
+
+    @Transactional
     public void deletePost(Long postId) {
         Long currentUserId = AuthContextHolder.getCurrentUserId();
         if (currentUserId == null) {
@@ -116,7 +143,7 @@ public class PostService {
     }
 
     public List<PostDto> getAllPostsOfUser(Long userId) {
-        List<Post> postList = postRepository.findByUserId(userId);
+        List<Post> postList = postRepository.findByUserIdOrderByCreatedAtDesc(userId);
         return postList
             .stream()
             .map(this::toDto)
@@ -133,7 +160,6 @@ public class PostService {
         if (!"connections".equals(scope)) {
             throw new BadRequestException("Feed scope must be for-you or connections");
         }
-
         Long currentUserId = AuthContextHolder.getCurrentUserId();
         List<PersonDto> connections = connectionsServiceClient.getFirstDegreeConnections(currentUserId);
         if (connections == null) {
@@ -160,6 +186,57 @@ public class PostService {
                 .stream()
                 .map(post -> toDto(post, authorNames, authorHeadlines))
                 .collect(Collectors.toList());
+    }
+
+    public PostFeedPageDto getFeedPage(String scope, int page, int size) {
+        if (page < 0 || size < 1 || size > 50) {
+            throw new BadRequestException("Feed page must be non-negative and size must be between 1 and 50");
+        }
+        Pageable pageable = PageRequest.of(page, size,
+                Sort.by(Sort.Direction.DESC, "createdAt").and(Sort.by(Sort.Direction.DESC, "id")));
+        Page<Post> posts;
+        if ("for-you".equals(scope)) {
+            posts = postRepository.findAll(pageable);
+            return toFeedPage(posts, Map.of(), Map.of());
+        }
+        if (!"connections".equals(scope)) {
+            throw new BadRequestException("Feed scope must be for-you or connections");
+        }
+
+        Long currentUserId = AuthContextHolder.getCurrentUserId();
+        List<PersonDto> connections = connectionsServiceClient.getFirstDegreeConnections(currentUserId);
+        if (connections == null) {
+            throw new IllegalStateException("Connections service returned no response");
+        }
+        Set<Long> userIds = new HashSet<>();
+        userIds.add(currentUserId);
+        Map<Long, String> authorNames = new HashMap<>();
+        Map<Long, String> authorHeadlines = new HashMap<>();
+        for (PersonDto person : connections) {
+            if (person.getUserId() == null) {
+                continue;
+            }
+            userIds.add(person.getUserId());
+            if (person.getName() != null && !person.getName().isBlank()) {
+                authorNames.putIfAbsent(person.getUserId(), person.getName());
+            }
+            if (person.getHeadline() != null && !person.getHeadline().isBlank()) {
+                authorHeadlines.putIfAbsent(person.getUserId(), person.getHeadline());
+            }
+        }
+        posts = postRepository.findByUserIdIn(new ArrayList<>(userIds), pageable);
+        return toFeedPage(posts, authorNames, authorHeadlines);
+    }
+
+    private PostFeedPageDto toFeedPage(Page<Post> posts, Map<Long, String> authorNames,
+            Map<Long, String> authorHeadlines) {
+        return new PostFeedPageDto(
+                posts.getContent().stream()
+                        .map(post -> toDto(post, authorNames, authorHeadlines))
+                        .collect(Collectors.toList()),
+                posts.getNumber(),
+                posts.getSize(),
+                posts.hasNext());
     }
 
     public List<PostDto> getSavedPosts() {

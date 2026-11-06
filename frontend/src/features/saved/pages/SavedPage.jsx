@@ -4,7 +4,16 @@ import AppSidebar from '../../../components/layout/AppSidebar'
 import { Icon } from '../../../components/ui/Icon'
 import PostCard from '../../feed/components/PostCard'
 import { useFeed } from '../../feed/data/useFeed'
-import { createComment, deletePost as deletePostRequest, getSavedPosts, setPostLiked, setPostSaved } from '../../feed/data/postsApi'
+import {
+  createComment,
+  deleteComment as deleteCommentRequest,
+  deletePost as deletePostRequest,
+  getSavedPosts,
+  setPostLiked,
+  setPostSaved,
+  updateComment,
+  updatePost,
+} from '../../feed/data/postsApi'
 import { formatComment, formatPost } from '../../feed/data/postFormatting'
 import { useAuth } from '../../auth/data/useAuth'
 
@@ -88,6 +97,55 @@ export default function SavedPage() {
     }
   }
 
+  async function editOwnPost(postId, content) {
+    try {
+      await updatePost(postId, content)
+      const update = (post) => post.id === postId ? { ...post, content } : post
+      setPosts((current) => current.map(update))
+      setSavedPosts((current) => current.map(update))
+      return true
+    } catch (requestError) {
+      setError(requestError.response?.data?.error || requestError.response?.data?.message || 'Your post could not be updated. Please try again.')
+      return false
+    }
+  }
+
+  async function editOwnComment(postId, commentId, content) {
+    try {
+      const savedComment = await updateComment(commentId, content)
+      const updatePostComment = (post) => post.id === postId
+        ? { ...post, commentItems: post.commentItems.map((comment) => comment.id === commentId
+          ? { ...comment, ...savedComment, text: savedComment.content }
+          : comment) }
+        : post
+      setPosts((current) => current.map(updatePostComment))
+      setSavedPosts((current) => current.map(updatePostComment))
+      return true
+    } catch (requestError) {
+      setError(requestError.response?.data?.error || requestError.response?.data?.message || 'Your comment could not be updated. Please try again.')
+      return false
+    }
+  }
+
+  async function deleteOwnComment(postId, commentId) {
+    try {
+      await deleteCommentRequest(commentId)
+      const updatePostComment = (post) => post.id === postId
+        ? {
+            ...post,
+            commentItems: post.commentItems.filter((comment) => comment.id !== commentId),
+            comments: Math.max(0, post.comments - 1),
+          }
+        : post
+      setPosts((current) => current.map(updatePostComment))
+      setSavedPosts((current) => current.map(updatePostComment))
+      return true
+    } catch (requestError) {
+      setError(requestError.response?.data?.error || requestError.response?.data?.message || 'Your comment could not be deleted. Please try again.')
+      return false
+    }
+  }
+
   return (
     <div className="app-shell">
       <AppHeader />
@@ -108,7 +166,10 @@ export default function SavedPage() {
                   onToggleLike={toggleLike}
                   onToggleSave={removeSavedPost}
                   onAddComment={addComment}
+                  onEdit={editOwnPost}
                   onDelete={deleteOwnPost}
+                  onEditComment={editOwnComment}
+                  onDeleteComment={deleteOwnComment}
                 />
               ))}
             </section>

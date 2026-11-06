@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { FeedContext } from './FeedContext'
-import { getFeed } from './postsApi'
+import { getFeedPage } from './postsApi'
 import { formatPost } from './postFormatting'
 import { useAuth } from '../../auth/data/useAuth'
 import { getDirectory } from '../../discover/data/discoverApi'
@@ -11,22 +11,31 @@ const EMPTY_DIRECTORY = []
 export default function FeedProvider({ children }) {
   const { user } = useAuth()
   const notify = useToast()
-  const [feedState, setFeedState] = useState({ userId: null, posts: [], directory: [], loadError: '' })
+  const [feedState, setFeedState] = useState({
+    userId: null,
+    posts: [],
+    directory: [],
+    loadError: '',
+    page: 0,
+    hasNext: false,
+  })
 
   useEffect(() => {
     if (!user) return undefined
 
     let active = true
-    getFeed()
+    getFeedPage()
       .then((items) => {
         if (active) setFeedState((current) => {
           const isSameUser = String(current.userId) === String(user.id)
           const directory = isSameUser ? current.directory : []
           return {
             userId: user.id,
-            posts: items.map((post) => formatPost(post, user, directory)),
+            posts: items.content.map((post) => formatPost(post, user, directory)),
             directory,
             loadError: '',
+            page: items.page,
+            hasNext: items.hasNext,
           }
         })
       })
@@ -37,6 +46,8 @@ export default function FeedProvider({ children }) {
             posts: [],
             directory: [],
             loadError: error.response?.data?.error || error.response?.data?.message || 'Could not load your posts. Please try again.',
+            page: 0,
+            hasNext: false,
           })
         }
       })
@@ -50,6 +61,8 @@ export default function FeedProvider({ children }) {
             directory,
             posts: posts.map((post) => formatPost(post, user, directory)),
             loadError: isSameUser ? current.loadError : '',
+            page: isSameUser ? current.page : 0,
+            hasNext: isSameUser ? current.hasNext : false,
           }
         })
       })
@@ -65,6 +78,8 @@ export default function FeedProvider({ children }) {
               loadError: isSameUser
                 ? current.loadError || 'Could not load community member names. Please try again.'
                 : 'Could not load community member names. Please try again.',
+              page: isSameUser ? current.page : 0,
+              hasNext: isSameUser ? current.hasNext : false,
             }
           })
         }
@@ -77,6 +92,8 @@ export default function FeedProvider({ children }) {
   const posts = isCurrentUserState ? feedState.posts : []
   const directory = isCurrentUserState ? feedState.directory : EMPTY_DIRECTORY
   const loadError = isCurrentUserState ? feedState.loadError : ''
+  const feedPage = isCurrentUserState ? feedState.page : 0
+  const hasNext = isCurrentUserState ? feedState.hasNext : false
   const isLoading = Boolean(user && !isCurrentUserState)
 
   function setPosts(update) {
@@ -87,8 +104,19 @@ export default function FeedProvider({ children }) {
         posts: typeof update === 'function' ? update(currentPosts) : update,
         directory: current.directory,
         loadError: current.loadError,
+        page: current.page,
+        hasNext: current.hasNext,
       }
     })
+  }
+
+  function setFeedPagination(page, nextPageAvailable) {
+    setFeedState((current) => ({
+      ...current,
+      userId: user?.id ?? null,
+      page,
+      hasNext: nextPageAvailable,
+    }))
   }
 
   function setLoadError(error) {
@@ -97,11 +125,15 @@ export default function FeedProvider({ children }) {
       posts: String(current.userId) === String(user?.id) ? current.posts : [],
       directory: current.directory,
       loadError: error,
+      page: current.page,
+      hasNext: current.hasNext,
     }))
   }
 
   return (
-    <FeedContext.Provider value={{ posts, setPosts, isLoading, loadError, setLoadError, directory }}>
+    <FeedContext.Provider value={{
+      posts, setPosts, isLoading, loadError, setLoadError, directory, feedPage, hasNext, setFeedPagination,
+    }}>
       {children}
     </FeedContext.Provider>
   )

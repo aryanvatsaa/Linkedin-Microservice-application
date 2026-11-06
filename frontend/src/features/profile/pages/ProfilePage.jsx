@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Link } from 'react-router'
 import AppHeader from '../../../components/layout/AppHeader'
 import AppSidebar from '../../../components/layout/AppSidebar'
@@ -9,8 +9,16 @@ import { useAuth } from '../../auth/data/useAuth'
 import { useFeed } from '../../feed/data/useFeed'
 import { getProfile, updateProfile, updateProfilePhoto, uploadProfilePhoto } from '../data/profileApi'
 import { getConnections } from '../../connections/data/connectionsApi'
-import { createComment, deletePost as deletePostRequest, setPostLiked } from '../../feed/data/postsApi'
-import { formatComment } from '../../feed/data/postFormatting'
+import {
+  createComment,
+  deleteComment as deleteCommentRequest,
+  deletePost as deletePostRequest,
+  getUserPosts,
+  setPostLiked,
+  updateComment,
+  updatePost,
+} from '../../feed/data/postsApi'
+import { formatComment, formatPost } from '../../feed/data/postFormatting'
 import { useToast } from '../../../app/useToast'
 
 export default function ProfilePage() {
@@ -24,6 +32,9 @@ export default function ProfilePage() {
     about: user.about || '',
     location: user.location || '',
     interests: user.interests || [],
+    skills: user.skills || [],
+    experience: user.experience || [],
+    education: user.education || [],
     connectionCount: 0,
   })
   const [isEditing, setIsEditing] = useState(false)
@@ -33,6 +44,7 @@ export default function ProfilePage() {
   const [isLoading, setIsLoading] = useState(true)
   const [isSaving, setIsSaving] = useState(false)
   const [isPhotoUploading, setIsPhotoUploading] = useState(false)
+  const [profilePosts, setProfilePosts] = useState([])
   const initials = profile.name.split(/\s+/).slice(0, 2).map((part) => part[0]).join('').toUpperCase()
   const completion = Math.round([
     profile.name,
@@ -40,12 +52,10 @@ export default function ProfilePage() {
     profile.about,
     profile.location,
     profile.interests.length ? 'interests' : '',
-  ].filter(Boolean).length / 5 * 100)
-  const profilePosts = useMemo(
-    () => posts.filter((post) => Number(post.userId) === Number(user.id)),
-    [posts, user.id],
-  )
-
+    profile.skills.length ? 'skills' : '',
+    profile.experience.length ? 'experience' : '',
+    profile.education.length ? 'education' : '',
+  ].filter(Boolean).length / 8 * 100)
   useEffect(() => {
     let active = true
     Promise.all([getProfile(), getConnections()])
@@ -62,8 +72,15 @@ export default function ProfilePage() {
       .finally(() => {
         if (active) setIsLoading(false)
       })
+    getUserPosts(user.id)
+      .then((userPosts) => {
+        if (active) setProfilePosts(userPosts.map((post) => formatPost(post, user, directory)))
+      })
+      .catch((requestError) => {
+        if (active) setError(requestError.response?.data?.error || 'Could not load your profile posts.')
+      })
     return () => { active = false }
-  }, [updateUser])
+  }, [updateUser, user.id])
 
   async function saveProfile(event) {
     event.preventDefault()
@@ -77,7 +94,11 @@ export default function ProfilePage() {
         headline: draft.headline,
         about: draft.about,
         location: draft.location,
-        interests: Array.isArray(draft.interests) ? draft.interests : draft.interests.split(','),
+        interests: (Array.isArray(draft.interests) ? draft.interests : draft.interests.split(','))
+          .map((item) => item.trim()).filter(Boolean),
+        skills: (draft.skills || []).map((item) => item.trim()).filter(Boolean),
+        experience: (draft.experience || []).map((item) => item.trim()).filter(Boolean),
+        education: (draft.education || []).map((item) => item.trim()).filter(Boolean),
       })
       const nextProfile = { ...savedProfile, connectionCount: profile.connectionCount }
       setProfile(nextProfile)
@@ -140,13 +161,15 @@ export default function ProfilePage() {
   }
 
   async function toggleLike(postId) {
-    const post = posts.find((item) => item.id === postId)
+    const post = profilePosts.find((item) => item.id === postId)
     if (!post) return
     try {
       await setPostLiked(postId, !post.liked)
-      setPosts((currentPosts) => currentPosts.map((item) => item.id === postId
+      const update = (currentPosts) => currentPosts.map((item) => item.id === postId
         ? { ...item, liked: !item.liked, likes: item.likes + (item.liked ? -1 : 1) }
-        : item))
+        : item)
+      setPosts(update)
+      setProfilePosts(update)
       return true
     } catch (requestError) {
       setError(requestError.response?.data?.error || 'Could not update this appreciation.')
@@ -157,13 +180,15 @@ export default function ProfilePage() {
   async function addComment(postId, text) {
     try {
       const comment = await createComment(postId, text)
-      setPosts((currentPosts) => currentPosts.map((post) => post.id === postId
+      const update = (currentPosts) => currentPosts.map((post) => post.id === postId
         ? {
             ...post,
             commentItems: [...(post.commentItems ?? []), formatComment(comment, user, directory)],
             comments: (post.comments ?? 0) + 1,
           }
-        : post))
+        : post)
+      setPosts(update)
+      setProfilePosts(update)
       return true
     } catch (requestError) {
       setError(requestError.response?.data?.error || 'Could not post this comment.')
@@ -174,10 +199,61 @@ export default function ProfilePage() {
   async function deleteOwnPost(postId) {
     try {
       await deletePostRequest(postId)
-      setPosts((currentPosts) => currentPosts.filter((post) => post.id !== postId))
+      const update = (currentPosts) => currentPosts.filter((post) => post.id !== postId)
+      setPosts(update)
+      setProfilePosts(update)
       return true
     } catch (requestError) {
       setError(requestError.response?.data?.error || requestError.response?.data?.message || 'Your post could not be deleted. Please try again.')
+      return false
+    }
+  }
+
+  async function editOwnPost(postId, content) {
+    try {
+      await updatePost(postId, content)
+      const update = (current) => current.map((post) => post.id === postId ? { ...post, content } : post)
+      setPosts(update)
+      setProfilePosts(update)
+      return true
+    } catch (requestError) {
+      setError(requestError.response?.data?.error || requestError.response?.data?.message || 'Your post could not be updated. Please try again.')
+      return false
+    }
+  }
+
+  async function editOwnComment(postId, commentId, content) {
+    try {
+      const savedComment = await updateComment(commentId, content)
+      const update = (current) => current.map((post) => post.id === postId
+        ? { ...post, commentItems: post.commentItems.map((comment) => comment.id === commentId
+          ? { ...comment, ...savedComment, text: savedComment.content }
+          : comment) }
+        : post)
+      setPosts(update)
+      setProfilePosts(update)
+      return true
+    } catch (requestError) {
+      setError(requestError.response?.data?.error || requestError.response?.data?.message || 'Your comment could not be updated. Please try again.')
+      return false
+    }
+  }
+
+  async function deleteOwnComment(postId, commentId) {
+    try {
+      await deleteCommentRequest(commentId)
+      const update = (current) => current.map((post) => post.id === postId
+        ? {
+            ...post,
+            commentItems: post.commentItems.filter((comment) => comment.id !== commentId),
+            comments: Math.max(0, post.comments - 1),
+          }
+        : post)
+      setPosts(update)
+      setProfilePosts(update)
+      return true
+    } catch (requestError) {
+      setError(requestError.response?.data?.error || requestError.response?.data?.message || 'Your comment could not be deleted. Please try again.')
       return false
     }
   }
@@ -252,6 +328,31 @@ export default function ProfilePage() {
                       onChange={(event) => setDraft({ ...draft, interests: event.target.value.split(',') })}
                     />
                   </label>
+                  <label>
+                    Skills (comma-separated)
+                    <input
+                      value={(draft.skills || []).join(', ')}
+                      onChange={(event) => setDraft({ ...draft, skills: event.target.value.split(',') })}
+                    />
+                  </label>
+                  <label>
+                    Experience (one role per line)
+                    <textarea
+                      rows="3"
+                      value={(draft.experience || []).join('\n')}
+                      onChange={(event) => setDraft({ ...draft, experience: event.target.value.split('\n') })}
+                      placeholder="Role · Company · Dates"
+                    />
+                  </label>
+                  <label>
+                    Education (one entry per line)
+                    <textarea
+                      rows="3"
+                      value={(draft.education || []).join('\n')}
+                      onChange={(event) => setDraft({ ...draft, education: event.target.value.split('\n') })}
+                      placeholder="Degree · Institution · Dates"
+                    />
+                  </label>
                   <div className="profile-edit-actions">
                     <button className="button button-dark" type="submit" disabled={isSaving}>{isSaving ? 'Saving…' : 'Save changes'}</button>
                     <button className="profile-cancel-button" type="button" onClick={cancelEdit}>Cancel</button>
@@ -288,12 +389,50 @@ export default function ProfilePage() {
                   {profile.interests.map((interest) => <span key={interest}>{interest}</span>)}
                 </div>
               </section>
+              <section className="profile-info-card">
+                <div className="profile-section-heading">
+                  <div><span className="section-kicker">WHAT I BRING</span><h2>Skills</h2></div>
+                </div>
+                <div className="interest-list">
+                  {profile.skills.map((skill) => <span key={skill}>{skill}</span>)}
+                  {!profile.skills.length && <p className="profile-about">Add skills to help people find you.</p>}
+                </div>
+              </section>
+              <section className="profile-info-card">
+                <div className="profile-section-heading">
+                  <div><span className="section-kicker">WHERE I’VE BEEN</span><h2>Experience</h2></div>
+                </div>
+                <ul className="profile-history-list">
+                  {profile.experience.map((item) => <li key={item}>{item}</li>)}
+                  {!profile.experience.length && <li>Add your work experience to your profile.</li>}
+                </ul>
+              </section>
+              <section className="profile-info-card">
+                <div className="profile-section-heading">
+                  <div><span className="section-kicker">WHAT I’VE LEARNED</span><h2>Education</h2></div>
+                </div>
+                <ul className="profile-history-list">
+                  {profile.education.map((item) => <li key={item}>{item}</li>)}
+                  {!profile.education.length && <li>Add your education to your profile.</li>}
+                </ul>
+              </section>
               <section className="profile-posts">
                 <div className="profile-section-heading profile-post-heading">
                   <div><span className="section-kicker">NOTES FROM MY CORNER</span><h2>Recent activity</h2></div>
                   <span className="profile-post-count">{profilePosts.length} posts</span>
                 </div>
-                {profilePosts.map((post) => <PostCard key={post.id} post={post} onToggleLike={toggleLike} onAddComment={addComment} onDelete={deleteOwnPost} />)}
+                {profilePosts.map((post) => (
+                  <PostCard
+                    key={post.id}
+                    post={post}
+                    onToggleLike={toggleLike}
+                    onAddComment={addComment}
+                    onEdit={editOwnPost}
+                    onDelete={deleteOwnPost}
+                    onEditComment={editOwnComment}
+                    onDeleteComment={deleteOwnComment}
+                  />
+                ))}
                 {!profilePosts.length && <p className="social-no-results">Your shared posts will appear here.</p>}
               </section>
             </>

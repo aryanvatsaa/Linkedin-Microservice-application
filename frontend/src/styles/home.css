@@ -558,6 +558,59 @@
   font-weight: 600;
 }
 
+.post-owner-actions {
+  display: flex;
+  gap: 7px;
+}
+
+.post-edit-form {
+  display: grid;
+  gap: 7px;
+  margin: 10px 0;
+}
+
+.post-edit-form textarea {
+  width: 100%;
+  min-height: 82px;
+  padding: 9px;
+  border: 1px solid #e3e8e0;
+  border-radius: 6px;
+  resize: vertical;
+}
+
+.post-edit-form > div {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.post-edit-form button,
+.post-comment-actions button {
+  padding: 5px 8px;
+  border: 1px solid #e4e9e1;
+  border-radius: 5px;
+  background: #fff;
+  color: #58715b;
+  cursor: pointer;
+  font-size: 8px;
+}
+
+.feed-load-more {
+  min-height: 36px;
+  border: 1px solid #e1e8de;
+  border-radius: 6px;
+  background: #fff;
+  color: #58715b;
+  cursor: pointer;
+  font-size: 9px;
+  font-weight: 600;
+}
+
+.feed-load-more:disabled {
+  cursor: wait;
+  opacity: 0.65;
+}
+
 .post-delete-button:hover {
   background: #f8ece8;
 }

@@ -51,6 +51,11 @@ public interface PersonRepository extends Neo4jRepository<Person, Long>{
             "DELETE r")
     void rejectConnectionRequest(Long senderId, Long receiverId);
 
+    @Query("MATCH (sender:Person)-[r:REQUESTED_TO]->(receiver:Person) " +
+            "WHERE sender.userId = $senderId AND receiver.userId = $receiverId " +
+            "DELETE r")
+    void cancelConnectionRequest(Long senderId, Long receiverId);
+
     @Query("MATCH (p1:Person)-[r:CONNECTED_TO]-(p2:Person) " +
             "WHERE p1.userId = $userId AND p2.userId = $connectionUserId " +
             "DELETE r")

@@ -24,4 +24,13 @@ public class ProfileUpdateDto {
 
     @Size(max = 20)
     private List<@NotBlank @Size(max = 50) String> interests;
+
+    @Size(max = 50)
+    private List<@NotBlank @Size(max = 50) String> skills;
+
+    @Size(max = 20)
+    private List<@NotBlank @Size(max = 500) String> experience;
+
+    @Size(max = 20)
+    private List<@NotBlank @Size(max = 500) String> education;
 }

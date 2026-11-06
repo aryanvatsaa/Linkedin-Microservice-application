@@ -5,12 +5,25 @@ import { useToast } from '../../../app/useToast'
 import { useAuth } from '../../auth/data/useAuth'
 import { formatPostTime } from '../data/postFormatting'
 
-export default function PostCard({ post, onToggleLike, onToggleSave, onAddComment, onDelete }) {
+export default function PostCard({
+  post,
+  onToggleLike,
+  onToggleSave,
+  onAddComment,
+  onEdit,
+  onDelete,
+  onEditComment,
+  onDeleteComment,
+}) {
   const { user } = useAuth()
   const notify = useToast()
   const [now, setNow] = useState(0)
   const [commentsOpen, setCommentsOpen] = useState(false)
   const [commentDraft, setCommentDraft] = useState('')
+  const [isEditing, setIsEditing] = useState(false)
+  const [editDraft, setEditDraft] = useState(post.content)
+  const [editingCommentId, setEditingCommentId] = useState(null)
+  const [editingCommentDraft, setEditingCommentDraft] = useState('')
   const [shareMessage, setShareMessage] = useState('')
   const comments = post.commentItems ?? []
   const postTime = post.createdAt && now ? formatPostTime(post.createdAt, now) : post.time
@@ -82,6 +95,59 @@ export default function PostCard({ post, onToggleLike, onToggleSave, onAddCommen
     }
   }
 
+  async function savePostEdit(event) {
+    event.preventDefault()
+    const content = editDraft.trim()
+    if (!content || content === post.content) {
+      setIsEditing(false)
+      setEditDraft(post.content)
+      return
+    }
+    try {
+      const succeeded = await onEdit?.(post.id, content)
+      if (succeeded === false) {
+        notify('Your post could not be updated. Please try again.', 'error')
+        return
+      }
+      setIsEditing(false)
+      notify('Your post was updated.')
+    } catch {
+      notify('Your post could not be updated. Please try again.', 'error')
+    }
+  }
+
+  async function saveCommentEdit(event, commentId) {
+    event.preventDefault()
+    const content = editingCommentDraft.trim()
+    if (!content) return
+    try {
+      const succeeded = await onEditComment?.(post.id, commentId, content)
+      if (succeeded === false) {
+        notify('Your comment could not be updated. Please try again.', 'error')
+        return
+      }
+      setEditingCommentId(null)
+      setEditingCommentDraft('')
+      notify('Your comment was updated.')
+    } catch {
+      notify('Your comment could not be updated. Please try again.', 'error')
+    }
+  }
+
+  async function removeComment(commentId) {
+    if (!window.confirm('Delete this comment? This action cannot be undone.')) return
+    try {
+      const succeeded = await onDeleteComment?.(post.id, commentId)
+      if (succeeded === false) {
+        notify('Your comment could not be deleted. Please try again.', 'error')
+        return
+      }
+      notify('Your comment was deleted.')
+    } catch {
+      notify('Your comment could not be deleted. Please try again.', 'error')
+    }
+  }
+
   async function sharePost() {
     const url = `${window.location.origin}/home#${encodeURIComponent(post.id)}`
 
@@ -115,13 +181,22 @@ export default function PostCard({ post, onToggleLike, onToggleSave, onAddCommen
           <span>{post.role}</span>
           <span>{postTime} <span className="post-dot">·</span> <Icon name="globe" size={12} /></span>
         </div>
-        {onDelete && Number(post.userId) === Number(user?.id) ? (
-          <button className="post-delete-button" onClick={removePost} aria-label="Delete your post">Delete</button>
+        {Number(post.userId) === Number(user?.id) && (onEdit || onDelete) ? (
+          <div className="post-owner-actions">
+            {onEdit && <button className="post-delete-button" onClick={() => { setEditDraft(post.content); setIsEditing(true) }} aria-label="Edit your post">Edit</button>}
+            {onDelete && <button className="post-delete-button" onClick={removePost} aria-label="Delete your post">Delete</button>}
+          </div>
         ) : (
           <button className="post-more" aria-label={`More options for ${post.name}'s post`}>···</button>
         )}
       </div>
-      <p className="post-content">{post.content}</p>
+      {isEditing ? (
+        <form className="post-edit-form" onSubmit={savePostEdit}>
+          <label className="sr-only" htmlFor={`post-edit-${post.id}`}>Edit post</label>
+          <textarea id={`post-edit-${post.id}`} value={editDraft} maxLength={2000} onChange={(event) => setEditDraft(event.target.value)} />
+          <div><button type="submit" disabled={!editDraft.trim()}>Save</button><button type="button" onClick={() => { setIsEditing(false); setEditDraft(post.content) }}>Cancel</button></div>
+        </form>
+      ) : <p className="post-content">{post.content}</p>}
       {post.art && (
         <div className={`feed-art feed-art-${post.art}`}>
           <span>{post.artCaption}</span>
@@ -155,7 +230,23 @@ export default function PostCard({ post, onToggleLike, onToggleSave, onAddCommen
           {comments.map((comment) => (
             <div className="post-comment" key={comment.id}>
               <Avatar initials={comment.initials} imageUrl={comment.imageUrl} tone={comment.tone} size="small" />
-              <p><strong>{comment.name}</strong><span>{comment.text}</span></p>
+              <div className="post-comment-copy">
+                <p><strong>{comment.name}</strong><span>{comment.text}</span></p>
+                {Number(comment.userId) === Number(user?.id) && (onEditComment || onDeleteComment) && (
+                  <div className="post-comment-actions">
+                    {onEditComment && <button type="button" onClick={() => { setEditingCommentId(comment.id); setEditingCommentDraft(comment.text) }}>Edit</button>}
+                    {onDeleteComment && <button type="button" onClick={() => removeComment(comment.id)}>Delete</button>}
+                  </div>
+                )}
+                {editingCommentId === comment.id && (
+                  <form className="comment-form post-comment-edit" onSubmit={(event) => saveCommentEdit(event, comment.id)}>
+                    <label className="sr-only" htmlFor={`comment-edit-${comment.id}`}>Edit comment</label>
+                    <input id={`comment-edit-${comment.id}`} value={editingCommentDraft} maxLength={2000} onChange={(event) => setEditingCommentDraft(event.target.value)} />
+                    <button type="submit" disabled={!editingCommentDraft.trim()}>Save</button>
+                    <button type="button" onClick={() => setEditingCommentId(null)}>Cancel</button>
+                  </form>
+                )}
+              </div>
             </div>
           ))}
           <form className="comment-form" onSubmit={submitComment}>
@@ -163,6 +254,7 @@ export default function PostCard({ post, onToggleLike, onToggleSave, onAddCommen
             <input
               id={`comment-${post.id}`}
               value={commentDraft}
+              maxLength={2000}
               onChange={(event) => setCommentDraft(event.target.value)}
               placeholder="Add a thoughtful comment..."
             />

@@ -66,6 +66,12 @@ public class ConnectionsController {
         return ResponseEntity.noContent().build();
     }
 
+    @DeleteMapping("/requests/outgoing/{userId}")
+    public ResponseEntity<Void> cancelOutgoingRequest(@PathVariable Long userId) {
+        connectionsService.cancelOutgoingRequest(userId);
+        return ResponseEntity.noContent().build();
+    }
+
     @DeleteMapping("/{userId}")
     public ResponseEntity<Void> removeConnection(@PathVariable Long userId) {
         connectionsService.removeConnection(userId);

@@ -15,4 +15,7 @@ public class UserDto {
     private String location;
     private String profilePhotoUrl;
     private List<String> interests;
+    private List<String> skills;
+    private List<String> experience;
+    private List<String> education;
 }

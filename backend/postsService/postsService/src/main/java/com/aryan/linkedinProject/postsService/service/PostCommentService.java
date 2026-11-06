@@ -67,6 +67,39 @@ public class PostCommentService {
         return modelMapper.map(comment, PostCommentDto.class);
     }
 
+    @Transactional
+    public PostCommentDto updateComment(Long commentId, CommentCreateRequestDto request) {
+        Long userId = AuthContextHolder.getCurrentUserId();
+        if (userId == null) {
+            throw new BadRequestException("Authentication is required");
+        }
+        PostComment comment = postCommentRepository.findById(commentId)
+                .orElseThrow(() -> new ResourceNotFoundException("Comment not found"));
+        if (!userId.equals(comment.getUserId())) {
+            throw new ResourceNotFoundException("Comment not found");
+        }
+        String content = request.getContent() == null ? "" : request.getContent().trim();
+        if (content.isEmpty()) {
+            throw new BadRequestException("A comment cannot be empty");
+        }
+        comment.setContent(content);
+        return modelMapper.map(postCommentRepository.save(comment), PostCommentDto.class);
+    }
+
+    @Transactional
+    public void deleteComment(Long commentId) {
+        Long userId = AuthContextHolder.getCurrentUserId();
+        if (userId == null) {
+            throw new BadRequestException("Authentication is required");
+        }
+        PostComment comment = postCommentRepository.findById(commentId)
+                .orElseThrow(() -> new ResourceNotFoundException("Comment not found"));
+        if (!userId.equals(comment.getUserId())) {
+            throw new ResourceNotFoundException("Comment not found");
+        }
+        postCommentRepository.delete(comment);
+    }
+
     private Post requirePost(Long postId) {
         return postRepository.findById(postId)
                 .orElseThrow(() -> new ResourceNotFoundException("Post not found with ID: " + postId));

@@ -7,6 +7,8 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
@@ -35,5 +37,18 @@ public class PostCommentsController {
             @PathVariable Long postId,
             @Valid @RequestBody CommentCreateRequestDto request) {
         return new ResponseEntity<>(postCommentService.addComment(postId, request), HttpStatus.CREATED);
+    }
+
+    @PutMapping("/item/{commentId}")
+    public ResponseEntity<PostCommentDto> updateComment(
+            @PathVariable Long commentId,
+            @Valid @RequestBody CommentCreateRequestDto request) {
+        return ResponseEntity.ok(postCommentService.updateComment(commentId, request));
+    }
+
+    @DeleteMapping("/item/{commentId}")
+    public ResponseEntity<Void> deleteComment(@PathVariable Long commentId) {
+        postCommentService.deleteComment(commentId);
+        return ResponseEntity.noContent().build();
     }
 }

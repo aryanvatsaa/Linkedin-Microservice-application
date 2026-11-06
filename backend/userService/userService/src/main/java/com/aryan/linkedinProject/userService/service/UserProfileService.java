@@ -39,16 +39,10 @@ public class UserProfileService {
         user.setHeadline(trimToNull(update.getHeadline()));
         user.setAbout(trimToNull(update.getAbout()));
         user.setLocation(trimToNull(update.getLocation()));
-        user.getInterests().clear();
-        if (update.getInterests() != null) {
-            Set<String> normalizedInterests = new HashSet<>();
-            for (String interest : update.getInterests()) {
-                String trimmed = interest.trim();
-                if (!trimmed.isEmpty() && normalizedInterests.add(trimmed.toLowerCase(Locale.ROOT))) {
-                    user.getInterests().add(trimmed);
-                }
-            }
-        }
+        replaceValues(user.getInterests(), update.getInterests());
+        replaceValues(user.getSkills(), update.getSkills());
+        replaceValues(user.getExperience(), update.getExperience());
+        replaceValues(user.getEducation(), update.getEducation());
         userUpdatedEventKafkaTemplate.send("user_updated_topic", UserUpdatedEvent.builder()
                 .userId(user.getId())
                 .name(user.getName())
@@ -76,7 +70,8 @@ public class UserProfileService {
         return userRepository.findAll().stream()
                 .filter(user -> !user.getId().equals(excludedUserId))
                 .map(user -> new PublicUserDto(
-                        user.getId(), user.getName(), user.getHeadline(), user.getProfilePhotoUrl()))
+                        user.getId(), user.getName(), user.getHeadline(), user.getProfilePhotoUrl(),
+                        user.getLocation(), List.copyOf(user.getInterests()), List.copyOf(user.getSkills())))
                 .toList();
     }
 
@@ -95,7 +90,24 @@ public class UserProfileService {
         dto.setLocation(user.getLocation());
         dto.setProfilePhotoUrl(user.getProfilePhotoUrl());
         dto.setInterests(List.copyOf(user.getInterests()));
+        dto.setSkills(List.copyOf(user.getSkills()));
+        dto.setExperience(List.copyOf(user.getExperience()));
+        dto.setEducation(List.copyOf(user.getEducation()));
         return dto;
+    }
+
+    private void replaceValues(List<String> target, List<String> values) {
+        target.clear();
+        if (values == null) {
+            return;
+        }
+        Set<String> seen = new HashSet<>();
+        for (String value : values) {
+            String trimmed = value.trim();
+            if (!trimmed.isEmpty() && seen.add(trimmed.toLowerCase(Locale.ROOT))) {
+                target.add(trimmed);
+            }
+        }
     }
 
     private String trimToNull(String value) {

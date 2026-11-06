@@ -8,14 +8,24 @@ import PostCard from '../components/PostCard'
 import { getConnections, getOutgoingRequests, sendConnectionRequest } from '../../discover/data/discoverApi'
 import { useFeed } from '../data/useFeed'
 import { useAuth } from '../../auth/data/useAuth'
-import { createComment, createPost, deletePost as deletePostRequest, getFeed, setPostLiked, setPostSaved } from '../data/postsApi'
+import {
+  createComment,
+  createPost,
+  deleteComment as deleteCommentRequest,
+  deletePost as deletePostRequest,
+  getFeedPage,
+  setPostLiked,
+  setPostSaved,
+  updateComment,
+  updatePost,
+} from '../data/postsApi'
 import { formatComment, formatPost } from '../data/postFormatting'
 import { useToast } from '../../../app/useToast'
 
 const CELEBRATION_EMOJIS = ['🎉', '👏', '🙌', '🎊', '🥳', '💐', '✨', '❤️', '😊', '🚀', '🌟', '💡']
 
 export default function HomePage() {
-  const { posts, setPosts, isLoading, loadError, setLoadError, directory } = useFeed()
+  const { posts, setPosts, isLoading, loadError, setLoadError, directory, feedPage, hasNext, setFeedPagination } = useFeed()
   const { user } = useAuth()
   const notify = useToast()
   const [draft, setDraft] = useState('')
@@ -26,6 +36,7 @@ export default function HomePage() {
   const [connectionError, setConnectionError] = useState('')
   const [feedScope, setFeedScope] = useState('for-you')
   const [isSwitchingFeed, setIsSwitchingFeed] = useState(false)
+  const [isLoadingMore, setIsLoadingMore] = useState(false)
   const [isEmojiPickerOpen, setIsEmojiPickerOpen] = useState(false)
   const textareaRef = useRef(null)
   const cursorPositionRef = useRef(0)
@@ -76,17 +87,33 @@ export default function HomePage() {
   }
 
   async function changeFeedScope(scope) {
-    if (scope === feedScope || isSwitchingFeed) return
+    if (scope === feedScope || isSwitchingFeed || isLoadingMore) return
     setLoadError('')
     setIsSwitchingFeed(true)
     try {
-      const items = await getFeed(scope)
-      setPosts(items.map((post) => formatPost(post, user, directory)))
+      const result = await getFeedPage(scope, 0)
+      setPosts(result.content.map((post) => formatPost(post, user, directory)))
+      setFeedPagination(result.page, result.hasNext)
       setFeedScope(scope)
     } catch (error) {
       setLoadError(error.response?.data?.error || error.response?.data?.message || 'Could not change your feed. Please try again.')
     } finally {
       setIsSwitchingFeed(false)
+    }
+  }
+
+  async function loadMorePosts() {
+    if (isLoadingMore || isSwitchingFeed || !hasNext) return
+    setIsLoadingMore(true)
+    try {
+      const result = await getFeedPage(feedScope, feedPage + 1)
+      const nextPosts = result.content.map((post) => formatPost(post, user, directory))
+      setPosts((current) => [...current, ...nextPosts.filter((post) => !current.some((item) => item.id === post.id))])
+      setFeedPagination(result.page, result.hasNext)
+    } catch (error) {
+      setLoadError(error.response?.data?.error || error.response?.data?.message || 'Could not load more posts. Please try again.')
+    } finally {
+      setIsLoadingMore(false)
     }
   }
 
@@ -163,6 +190,49 @@ export default function HomePage() {
     }
   }
 
+  async function editOwnPost(postId, content) {
+    try {
+      await updatePost(postId, content)
+      setPosts((current) => current.map((post) => post.id === postId ? { ...post, content } : post))
+      return true
+    } catch (error) {
+      setLoadError(error.response?.data?.error || error.response?.data?.message || 'Your post could not be updated. Please try again.')
+      return false
+    }
+  }
+
+  async function editOwnComment(postId, commentId, content) {
+    try {
+      const savedComment = await updateComment(commentId, content)
+      setPosts((current) => current.map((post) => post.id === postId
+        ? { ...post, commentItems: post.commentItems.map((comment) => comment.id === commentId
+          ? { ...comment, ...savedComment, text: savedComment.content }
+          : comment) }
+        : post))
+      return true
+    } catch (error) {
+      setLoadError(error.response?.data?.error || error.response?.data?.message || 'Your comment could not be updated. Please try again.')
+      return false
+    }
+  }
+
+  async function deleteOwnComment(postId, commentId) {
+    try {
+      await deleteCommentRequest(commentId)
+      setPosts((current) => current.map((post) => post.id === postId
+        ? {
+            ...post,
+            commentItems: post.commentItems.filter((comment) => comment.id !== commentId),
+            comments: Math.max(0, post.comments - 1),
+          }
+        : post))
+      return true
+    } catch (error) {
+      setLoadError(error.response?.data?.error || error.response?.data?.message || 'Your comment could not be deleted. Please try again.')
+      return false
+    }
+  }
+
   function attachImage(event) {
     const [file] = event.target.files ?? []
     if (!file) return
@@ -221,8 +291,8 @@ export default function HomePage() {
           <div className="feed-heading">
             <div><span className="section-kicker">YOUR LITTLE CORNER OF NEXORA</span><h1>Your community</h1></div>
             <div className="feed-filter" role="group" aria-label="Choose which posts to see">
-              <button type="button" aria-pressed={feedScope === 'for-you'} disabled={isSwitchingFeed} onClick={() => changeFeedScope('for-you')}>For you</button>
-              <button type="button" aria-pressed={feedScope === 'connections'} disabled={isSwitchingFeed} onClick={() => changeFeedScope('connections')}>Connections</button>
+              <button type="button" aria-pressed={feedScope === 'for-you'} disabled={isSwitchingFeed || isLoadingMore} onClick={() => changeFeedScope('for-you')}>For you</button>
+              <button type="button" aria-pressed={feedScope === 'connections'} disabled={isSwitchingFeed || isLoadingMore} onClick={() => changeFeedScope('connections')}>Connections</button>
             </div>
           </div>
           <form className="composer-card" onSubmit={publishPost}>
@@ -234,6 +304,7 @@ export default function HomePage() {
                 ref={textareaRef}
                 placeholder={`What’s on your mind, ${user.name.split(' ')[0]}?`}
                 value={draft}
+                maxLength={2000}
                 onChange={(event) => {
                   setDraft(event.target.value)
                   cursorPositionRef.current = event.target.selectionStart
@@ -295,9 +366,17 @@ export default function HomePage() {
                 onToggleLike={toggleLike}
                 onToggleSave={toggleSave}
                 onAddComment={addComment}
+                onEdit={editOwnPost}
                 onDelete={deleteOwnPost}
+                onEditComment={editOwnComment}
+                onDeleteComment={deleteOwnComment}
               />
             ))}
+            {hasNext && !loadError && !isSwitchingFeed && (
+              <button className="feed-load-more" type="button" onClick={loadMorePosts} disabled={isLoadingMore}>
+                {isLoadingMore ? 'Loading more posts…' : 'Load more'}
+              </button>
+            )}
           </div>
         </main>
 

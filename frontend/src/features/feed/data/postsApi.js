@@ -5,6 +5,16 @@ export async function getFeed(scope = 'for-you') {
   return data
 }
 
+export async function getFeedPage(scope = 'for-you', page = 0) {
+  const { data } = await apiClient.get('/posts/core/feed/page', { params: { scope, page, size: 10 } })
+  return data
+}
+
+export async function getUserPosts(userId) {
+  const { data } = await apiClient.get(`/posts/core/users/${userId}/allPosts`)
+  return data
+}
+
 export async function createPost(content, file) {
   const payload = new FormData()
   payload.append('post', new Blob([JSON.stringify({ content })], { type: 'application/json' }))
@@ -18,6 +28,11 @@ export async function deletePost(postId) {
   await apiClient.delete(`/posts/core/${postId}`)
 }
 
+export async function updatePost(postId, content) {
+  const { data } = await apiClient.put(`/posts/core/${postId}`, { content })
+  return data
+}
+
 export async function setPostLiked(postId, liked) {
   const method = liked ? 'post' : 'delete'
   await apiClient[method](`/posts/likes/${postId}`)
@@ -26,6 +41,15 @@ export async function setPostLiked(postId, liked) {
 export async function createComment(postId, content) {
   const { data } = await apiClient.post(`/posts/comments/${postId}`, { content })
   return data
+}
+
+export async function updateComment(commentId, content) {
+  const { data } = await apiClient.put(`/posts/comments/item/${commentId}`, { content })
+  return data
+}
+
+export async function deleteComment(commentId) {
+  await apiClient.delete(`/posts/comments/item/${commentId}`)
 }
 
 export async function getSavedPosts() {

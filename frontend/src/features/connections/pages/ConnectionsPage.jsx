@@ -4,7 +4,15 @@ import AppHeader from '../../../components/layout/AppHeader'
 import AppSidebar from '../../../components/layout/AppSidebar'
 import { Avatar } from '../../../components/ui/Avatar'
 import { Icon } from '../../../components/ui/Icon'
-import { acceptConnectionRequest, getConnections, getIncomingRequests, rejectConnectionRequest, removeConnection as removeConnectionRequest } from '../data/connectionsApi'
+import {
+  acceptConnectionRequest,
+  cancelOutgoingRequest,
+  getConnections,
+  getIncomingRequests,
+  getOutgoingRequests,
+  rejectConnectionRequest,
+  removeConnection as removeConnectionRequest,
+} from '../data/connectionsApi'
 import { useToast } from '../../../app/useToast'
 
 function mapPerson(person) {
@@ -24,6 +32,7 @@ function mapPerson(person) {
 export default function ConnectionsPage() {
   const notify = useToast()
   const [requests, setRequests] = useState([])
+  const [outgoingRequests, setOutgoingRequests] = useState([])
   const [connections, setConnections] = useState([])
   const [query, setQuery] = useState('')
   const [isLoading, setIsLoading] = useState(true)
@@ -31,11 +40,12 @@ export default function ConnectionsPage() {
 
   useEffect(() => {
     let active = true
-    Promise.all([getIncomingRequests(), getConnections()])
-      .then(([incoming, connected]) => {
+    Promise.all([getIncomingRequests(), getConnections(), getOutgoingRequests()])
+      .then(([incoming, connected, outgoing]) => {
         if (!active) return
         setRequests(incoming.map(mapPerson))
         setConnections(connected.map(mapPerson))
+        setOutgoingRequests(outgoing.map(mapPerson))
       })
       .catch((requestError) => {
         if (active) setError(requestError.response?.data?.error || 'Could not load your connections.')
@@ -68,6 +78,19 @@ export default function ConnectionsPage() {
       notify('Connection request dismissed.')
     } catch (requestError) {
       const message = requestError.response?.data?.error || 'Could not dismiss this request.'
+      setError(message)
+      notify(message, 'error')
+    }
+  }
+
+  async function cancelRequest(person) {
+    notify('Cancelling your connection request…', 'loading')
+    try {
+      await cancelOutgoingRequest(person.id)
+      setOutgoingRequests((current) => current.filter((request) => request.id !== person.id))
+      notify(`Your request to ${person.name} was cancelled.`)
+    } catch (requestError) {
+      const message = requestError.response?.data?.error || 'Could not cancel this connection request.'
       setError(message)
       notify(message, 'error')
     }
@@ -126,6 +149,25 @@ export default function ConnectionsPage() {
               </div>
             ) : (
               <div className="social-empty"><span><Icon name="check" size={19} /></span><strong>No requests right now</strong><p>When someone wants to connect, you’ll find it here.</p></div>
+            )}
+          </section>
+
+          <section className="social-section-card">
+            <div className="social-section-heading">
+              <div><h2>Sent requests</h2><span>{outgoingRequests.length ? `${outgoingRequests.length} awaiting a reply` : 'No pending requests'}</span></div>
+            </div>
+            {outgoingRequests.length ? (
+              <div className="connection-request-list">
+                {outgoingRequests.map((person) => (
+                  <article className="connection-request" key={person.id}>
+                    <Avatar initials={person.initials} imageUrl={person.profilePhotoUrl} tone={person.tone} size="large" />
+                    <div className="connection-person-copy"><strong>{person.name}</strong><span>{person.role}</span></div>
+                    <button className="connection-dismiss" onClick={() => cancelRequest(person)}>Cancel request</button>
+                  </article>
+                ))}
+              </div>
+            ) : (
+              <div className="social-empty"><strong>No outgoing requests</strong><p>Requests you send will appear here until they’re answered.</p></div>
             )}
           </section>
 

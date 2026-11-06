@@ -503,6 +503,37 @@
   color: #d6e0d6;
 }
 
+:root[data-theme="dark"] .profile-history-list {
+  color: #bdc9be;
+}
+
+:root[data-theme="dark"] .feed-load-more,
+:root[data-theme="dark"] .post-edit-form button {
+  border-color: #455146;
+  background: #273129;
+  color: #b7c8b5;
+}
+
+:root[data-theme="dark"] .post-edit-form textarea {
+  border-color: #3b473d;
+  background: #1b241e;
+  color: #d6e0d6;
+}
+
+:root[data-theme="dark"] .post-comment-actions button {
+  color: #aebaae;
+}
+
+:root[data-theme="dark"] .discover-filters label {
+  color: #a4b0a5;
+}
+
+:root[data-theme="dark"] .discover-filters select {
+  border-color: #3b473d;
+  background: #1b241e;
+  color: #d6e0d6;
+}
+
 :root[data-theme="dark"] .visibility-icon {
   background: #354635;
   color: #c3d6bd;

@@ -131,6 +131,17 @@ public class ConnectionsService {
                 receiverId);
     }
 
+    public void cancelOutgoingRequest(Long receiverId) {
+        Long senderId = AuthContextHolder.getCurrentUserId();
+        if (senderId == null) {
+            throw new BadRequestException("Authentication is required");
+        }
+        if (senderId.equals(receiverId) || !personRepository.connectionRequestExists(senderId, receiverId)) {
+            throw new BadRequestException("No outgoing connection request exists for this user");
+        }
+        personRepository.cancelConnectionRequest(senderId, receiverId);
+    }
+
     public void removeConnection(Long connectionUserId) {
         Long currentUserId = AuthContextHolder.getCurrentUserId();
         if (currentUserId == null) {

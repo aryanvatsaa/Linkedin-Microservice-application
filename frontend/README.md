@@ -26,7 +26,12 @@ The deployment environment must allow browser requests to that Gateway origin.
 - Comments and saved posts are persisted by the posts service. New comments on
   another member's post publish an asynchronous Kafka notification.
 - The home feed combines the signed-in user's posts with posts from first-degree
-  connections.
+  connections and loads posts in pages.
+- Authors can edit or delete their posts and comments. The posts service checks
+  ownership for these operations.
+- Profiles include skills, experience, and education; people discovery can filter
+  by location, skill, and interest.
+- Connection requests can be reviewed and cancelled from the connections page.
 
 Messaging and opportunities are intentionally out of scope.
 
