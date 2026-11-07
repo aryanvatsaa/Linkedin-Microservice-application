@@ -1,58 +1,14 @@
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 import AppHeader from '../../../components/layout/AppHeader'
 import AppSidebar from '../../../components/layout/AppSidebar'
 import { Avatar } from '../../../components/ui/Avatar'
 import { Icon } from '../../../components/ui/Icon'
-import { getNotifications, markAllNotificationsRead, markNotificationRead } from '../data/notificationsApi'
+import { useNotifications } from '../data/useNotifications'
 
 export default function NotificationsPage() {
-  const [notifications, setNotifications] = useState([])
+  const { notifications, unreadCount, error, isLoading, markAllRead, markRead } = useNotifications()
   const [filter, setFilter] = useState('all')
-  const [error, setError] = useState('')
-  const [isLoading, setIsLoading] = useState(true)
-  const unreadCount = notifications.filter((item) => item.unread).length
   const visibleNotifications = notifications.filter((item) => filter === 'all' || item.unread)
-
-  useEffect(() => {
-    let active = true
-    getNotifications()
-      .then((items) => {
-        if (active) setNotifications(items.map((item) => ({
-          ...item,
-          actor: item.actorUserId ? `Nexora member ${item.actorUserId}` : 'Nexora',
-          initials: item.actorUserId ? `N${String(item.actorUserId).slice(-1)}` : 'NX',
-          tone: 'sage',
-          unread: !item.read,
-          time: item.createdAt ? new Date(item.createdAt).toLocaleString() : '',
-          detail: '',
-        })))
-      })
-      .catch((requestError) => {
-        if (active) setError(requestError.response?.data?.error || 'Could not load notifications.')
-      })
-      .finally(() => {
-        if (active) setIsLoading(false)
-      })
-    return () => { active = false }
-  }, [])
-
-  async function markAllRead() {
-    try {
-      await markAllNotificationsRead()
-      setNotifications((current) => current.map((item) => ({ ...item, unread: false })))
-    } catch (requestError) {
-      setError(requestError.response?.data?.error || 'Could not mark notifications as read.')
-    }
-  }
-
-  async function markRead(notificationId) {
-    try {
-      await markNotificationRead(notificationId)
-      setNotifications((current) => current.map((item) => item.id === notificationId ? { ...item, unread: false } : item))
-    } catch (requestError) {
-      setError(requestError.response?.data?.error || 'Could not mark this notification as read.')
-    }
-  }
 
   return (
     <div className="app-shell">
@@ -86,9 +42,9 @@ export default function NotificationsPage() {
                 </div>
                 {item.unread && <button className="notification-unread-dot" onClick={() => markRead(item.id)} aria-label={`Mark ${item.actor}'s notification as read`} title="Mark as read" />}
               </article>
-            )) : (
+            )) : !isLoading && !error ? (
               <div className="social-empty notification-empty"><span><Icon name="bell" size={19} /></span><strong>You’re all caught up</strong><p>No unread notifications at the moment.</p></div>
-            )}
+            ) : null}
           </section>
         </main>
         <aside className="right-rail social-rail">

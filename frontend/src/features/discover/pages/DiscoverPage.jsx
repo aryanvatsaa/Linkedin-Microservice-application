@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
+import { useSearchParams } from 'react-router'
 import AppHeader from '../../../components/layout/AppHeader'
 import AppSidebar from '../../../components/layout/AppSidebar'
 import { Avatar } from '../../../components/ui/Avatar'
@@ -27,18 +28,19 @@ import { useToast } from '../../../app/useToast'
 
 export default function DiscoverPage() {
   const { user } = useAuth()
-  const [query, setQuery] = useState('')
+  const [searchParams, setSearchParams] = useSearchParams()
+  const query = searchParams.get('query') || ''
   const [locationFilter, setLocationFilter] = useState('')
   const [skillFilter, setSkillFilter] = useState('')
   const [interestFilter, setInterestFilter] = useState('')
-  const [activeTab, setActiveTab] = useState('people')
+  const activeTab = searchParams.get('tab') === 'posts' ? 'posts' : 'people'
   const [people, setPeople] = useState([])
   const [connectedIds, setConnectedIds] = useState([])
   const [pendingIds, setPendingIds] = useState([])
   const [incomingIds, setIncomingIds] = useState([])
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState('')
-  const { setPosts, directory } = useFeed()
+  const { posts, setPosts, directory } = useFeed()
   const [discoveryPosts, setDiscoveryPosts] = useState([])
   const [isLoadingPosts, setIsLoadingPosts] = useState(true)
   const notify = useToast()
@@ -112,6 +114,23 @@ export default function DiscoverPage() {
     () => discoveryPosts.filter((post) => `${post.name} ${post.content}`.toLowerCase().includes(query.toLowerCase())),
     [discoveryPosts, query],
   )
+
+  function updateSearchQuery(nextQuery) {
+    setSearchParams((current) => {
+      const next = new URLSearchParams(current)
+      if (nextQuery) next.set('query', nextQuery)
+      else next.delete('query')
+      return next
+    }, { replace: true })
+  }
+
+  function selectTab(tab) {
+    setSearchParams((current) => {
+      const next = new URLSearchParams(current)
+      next.set('tab', tab)
+      return next
+    }, { replace: true })
+  }
 
   async function requestConnection(personId) {
     notify('Sending connection request…', 'loading')
@@ -248,7 +267,7 @@ export default function DiscoverPage() {
           <div className="social-page-heading">
             <div><span className="section-kicker">A FEW NEW THINGS TO FIND</span><h1>Discover</h1><p>Interesting people and ideas from around Nexora.</p></div>
           </div>
-          <label className="discover-search"><Icon name="search" size={19} /><input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Try a name, an interest, or an idea" aria-label="Search people and posts" /><span>⌘ K</span></label>
+          <label className="discover-search"><Icon name="search" size={19} /><input value={query} onChange={(event) => updateSearchQuery(event.target.value)} placeholder="Try a name, an interest, or an idea" aria-label="Search people and posts" /><span>⌘ K</span></label>
           {activeTab === 'people' && (
             <div className="discover-filters" aria-label="Filter people">
               <label>Location
@@ -274,8 +293,8 @@ export default function DiscoverPage() {
           {error && <p className="composer-error" role="alert">{error}</p>}
           {(isLoading || isLoadingPosts) && <p role="status">Finding your Nexora community…</p>}
           <div className="discover-tabs" role="tablist" aria-label="Discover category">
-            <button className={activeTab === 'people' ? 'discover-tab active' : 'discover-tab'} role="tab" aria-selected={activeTab === 'people'} onClick={() => setActiveTab('people')}>People <span>{filteredPeople.length}</span></button>
-            <button className={activeTab === 'posts' ? 'discover-tab active' : 'discover-tab'} role="tab" aria-selected={activeTab === 'posts'} onClick={() => setActiveTab('posts')}>Posts <span>{filteredPosts.length}</span></button>
+            <button className={activeTab === 'people' ? 'discover-tab active' : 'discover-tab'} role="tab" aria-selected={activeTab === 'people'} onClick={() => selectTab('people')}>People <span>{filteredPeople.length}</span></button>
+            <button className={activeTab === 'posts' ? 'discover-tab active' : 'discover-tab'} role="tab" aria-selected={activeTab === 'posts'} onClick={() => selectTab('posts')}>Posts <span>{filteredPosts.length}</span></button>
           </div>
           {activeTab === 'people' ? (
             <section className="discover-people-grid">

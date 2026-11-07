@@ -20,10 +20,11 @@ import {
 } from '../../feed/data/postsApi'
 import { formatComment, formatPost } from '../../feed/data/postFormatting'
 import { useToast } from '../../../app/useToast'
+import { getProfileCompletion } from '../data/profileCompletion'
 
 export default function ProfilePage() {
   const { user, updateUser } = useAuth()
-  const { posts, setPosts, directory } = useFeed()
+  const { setPosts, directory } = useFeed()
   const notify = useToast()
   const [profile, setProfile] = useState({
     name: user.name,
@@ -37,7 +38,7 @@ export default function ProfilePage() {
     education: user.education || [],
     connectionCount: 0,
   })
-  const [isEditing, setIsEditing] = useState(false)
+  const [isEditing, setIsEditing] = useState(() => window.location.hash === '#edit')
   const [draft, setDraft] = useState(profile)
   const [error, setError] = useState('')
   const [status, setStatus] = useState('')
@@ -46,16 +47,7 @@ export default function ProfilePage() {
   const [isPhotoUploading, setIsPhotoUploading] = useState(false)
   const [profilePosts, setProfilePosts] = useState([])
   const initials = profile.name.split(/\s+/).slice(0, 2).map((part) => part[0]).join('').toUpperCase()
-  const completion = Math.round([
-    profile.name,
-    profile.headline,
-    profile.about,
-    profile.location,
-    profile.interests.length ? 'interests' : '',
-    profile.skills.length ? 'skills' : '',
-    profile.experience.length ? 'experience' : '',
-    profile.education.length ? 'education' : '',
-  ].filter(Boolean).length / 8 * 100)
+  const completion = getProfileCompletion(profile)
   useEffect(() => {
     let active = true
     Promise.all([getProfile(), getConnections()])

@@ -21,6 +21,8 @@ import {
 } from '../data/postsApi'
 import { formatComment, formatPost } from '../data/postFormatting'
 import { useToast } from '../../../app/useToast'
+import { getProfile } from '../../profile/data/profileApi'
+import { getProfileChecklist, getProfileCompletion } from '../../profile/data/profileCompletion'
 
 const CELEBRATION_EMOJIS = ['🎉', '👏', '🙌', '🎊', '🥳', '💐', '✨', '❤️', '😊', '🚀', '🌟', '💡']
 
@@ -34,36 +36,64 @@ export default function HomePage() {
   const [composerError, setComposerError] = useState('')
   const [suggestedPeople, setSuggestedPeople] = useState([])
   const [connectionError, setConnectionError] = useState('')
+  const [profileDetails, setProfileDetails] = useState(user)
+  const [profileError, setProfileError] = useState('')
   const [feedScope, setFeedScope] = useState('for-you')
   const [isSwitchingFeed, setIsSwitchingFeed] = useState(false)
   const [isLoadingMore, setIsLoadingMore] = useState(false)
   const [isEmojiPickerOpen, setIsEmojiPickerOpen] = useState(false)
   const textareaRef = useRef(null)
   const cursorPositionRef = useRef(0)
+  const checklist = getProfileChecklist(profileDetails)
+  const completion = getProfileCompletion(profileDetails)
+  const missingProfileItems = checklist.filter((item) => !item.complete).slice(0, 3)
+
+  useEffect(() => {
+    let active = true
+    getProfile()
+      .then((profile) => {
+        if (active) setProfileDetails(profile)
+      })
+      .catch((error) => {
+        if (active) setProfileError(error.response?.data?.error || 'Could not load your profile checklist.')
+      })
+    return () => { active = false }
+  }, [])
 
   useEffect(() => {
     let active = true
     Promise.all([getConnections(), getOutgoingRequests()])
       .then(([connections, outgoing]) => {
         const unavailableIds = new Set([
-          ...connections.map((person) => person.userId),
-          ...outgoing.map((person) => person.userId),
+          ...connections.map((person) => String(person.userId)),
+          ...outgoing.map((person) => String(person.userId)),
         ])
+        const sharedInterests = new Set(
+          (profileDetails.interests || user.interests || []).map((interest) => String(interest).trim().toLocaleLowerCase()),
+        )
         if (active) setSuggestedPeople(directory
-          .filter((person) => !unavailableIds.has(person.id))
-          .slice(0, 3)
-          .map((person) => ({
-            ...person,
-            initials: person.name.split(/\s+/).slice(0, 2).map((part) => part[0]).join('').toUpperCase(),
-            tone: 'sage',
-            role: person.headline || 'Nexora member',
-          })))
+          .filter((person) => !unavailableIds.has(String(person.id)))
+          .map((person, index) => {
+            const matchingInterests = (person.interests || []).filter((interest) => (
+              sharedInterests.has(String(interest).trim().toLocaleLowerCase())
+            ))
+            return {
+              ...person,
+              initials: person.name.split(/\s+/).slice(0, 2).map((part) => part[0]).join('').toUpperCase(),
+              tone: 'sage',
+              role: person.headline || 'Nexora member',
+              matchingInterests,
+              directoryOrder: index,
+            }
+          })
+          .sort((left, right) => right.matchingInterests.length - left.matchingInterests.length || left.directoryOrder - right.directoryOrder)
+          .slice(0, 3))
       })
       .catch((error) => {
         if (active) setConnectionError(error.response?.data?.error || 'Could not load suggestions.')
       })
     return () => { active = false }
-  }, [directory])
+  }, [directory, profileDetails.interests, user.interests])
 
   async function publishPost(event) {
     event.preventDefault()
@@ -386,8 +416,23 @@ export default function HomePage() {
             <span className="section-kicker">A PLACE TO GROW</span>
             <h2>Good to have<br />you here, {user.name.split(' ')[0]}.</h2>
             <p>Your Nexora community is just getting started. Say hello, share an idea, see what grows.</p>
-            <div className="welcome-progress"><span /><span>Profile basics <strong>2 of 3</strong></span></div>
-            <Link className="rail-text-link" to="/profile">Finish your profile <Icon name="arrow" size={14} /></Link>
+            <div className="welcome-progress">
+              <span className="welcome-progress-track"><i style={{ width: `${completion}%` }} /></span>
+              <span>Profile <strong>{completion}%</strong></span>
+            </div>
+            {profileError && <p className="composer-error" role="alert">{profileError}</p>}
+            {missingProfileItems.length > 0 ? (
+              <ul className="profile-checklist">
+                {missingProfileItems.map((item) => (
+                  <li key={item.field}>
+                    <Link to="/profile#edit"><Icon name="plus" size={13} />{item.label}</Link>
+                  </li>
+                ))}
+              </ul>
+            ) : (
+              <p className="profile-checklist-complete"><Icon name="check" size={14} /> Your profile is complete.</p>
+            )}
+            <Link className="rail-text-link" to="/profile#edit">Edit your profile <Icon name="arrow" size={14} /></Link>
           </section>
           <section className="rail-card people-card">
             <div className="rail-heading"><div><span className="section-kicker">YOUR NEXT HELLO</span><h3>People to know</h3></div><Link to="/discover" aria-label="See all suggested people"><Icon name="arrow" size={17} /></Link></div>
@@ -395,7 +440,11 @@ export default function HomePage() {
             {suggestedPeople.map((person) => (
               <div className="suggested-person" key={person.name}>
                 <Avatar initials={person.initials} imageUrl={person.profilePhotoUrl} tone={person.tone} />
-                <div className="suggested-info"><strong>{person.name}</strong><span>{person.role}</span></div>
+                <div className="suggested-info">
+                  <strong>{person.name}</strong>
+                  <span>{person.matchingInterests.length ? `${person.matchingInterests.length} shared ${person.matchingInterests.length === 1 ? 'interest' : 'interests'}` : person.role}</span>
+                  {person.matchingInterests.length > 0 && <small>{person.matchingInterests.slice(0, 2).join(' · ')}</small>}
+                </div>
                 <button
                   className="connect-button"
                   aria-label={`Connect with ${person.name}`}

@@ -251,7 +251,57 @@
   color: #97a399;
 }
 
+:root[data-theme="dark"] .app-search-results {
+  border-color: #3b473d;
+  background: #222b24;
+  box-shadow: 0 16px 40px #080b093d;
+}
+
+:root[data-theme="dark"] .app-search-result-group + .app-search-result-group,
+:root[data-theme="dark"] .app-search-view-all {
+  border-color: #39443b;
+}
+
+:root[data-theme="dark"] .app-search-result:hover,
+:root[data-theme="dark"] .app-search-result:focus-visible {
+  background: #2b382d;
+}
+
+:root[data-theme="dark"] .app-search-result strong {
+  color: #d3ded3;
+}
+
+:root[data-theme="dark"] .app-search-result small,
+:root[data-theme="dark"] .app-search-result-label,
+:root[data-theme="dark"] .app-search-no-results {
+  color: #a4b0a5;
+}
+
+:root[data-theme="dark"] .app-search-view-all {
+  color: #b0c9ad;
+}
+
+:root[data-theme="dark"] .notification-badge {
+  border-color: #1d251f;
+}
+
 :root[data-theme="dark"] .app-search:focus-within {
+  border-color: #536b55;
+  background: #202a22;
+  box-shadow: 0 0 0 3px #8eaf8918;
+}
+
+:root[data-theme="dark"] .app-search-mobile-trigger:hover {
+  background: #303d32;
+  color: #d5e5d3;
+}
+
+:root[data-theme="dark"] .app-search-mobile-trigger,
+:root[data-theme="dark"] .app-search-close {
+  color: #b6c3b7;
+}
+
+:root[data-theme="dark"] .app-search-open .app-search {
   border-color: #536b55;
   background: #202a22;
   box-shadow: 0 0 0 3px #8eaf8918;
@@ -473,9 +523,26 @@
   background: linear-gradient(90deg, #83a382 67%, #3c493d 67%);
 }
 
+:root[data-theme="dark"] .welcome-progress-track {
+  background: #3c493d;
+}
+
+:root[data-theme="dark"] .welcome-progress-track i {
+  background: #83a382;
+}
+
 :root[data-theme="dark"] .welcome-progress > span:last-child,
 :root[data-theme="dark"] .welcome-progress strong {
   color: #a9b8a9;
+}
+
+:root[data-theme="dark"] .profile-checklist a,
+:root[data-theme="dark"] .profile-checklist-complete {
+  color: #b0c2ae;
+}
+
+:root[data-theme="dark"] .profile-checklist a:hover {
+  color: #d1e0cf;
 }
 
 :root[data-theme="dark"] .rail-heading > button,

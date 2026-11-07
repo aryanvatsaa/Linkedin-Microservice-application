@@ -3,6 +3,7 @@ import { ThemeProvider } from './ThemeProvider'
 import ToastProvider from './ToastProvider'
 import AuthProvider from '../features/auth/data/AuthProvider'
 import FeedProvider from '../features/feed/data/FeedProvider'
+import NotificationProvider from '../features/notifications/data/NotificationProvider'
 import RequireAuth from '../components/routing/RequireAuth'
 import AuthPage from '../features/auth/pages/AuthPage'
 import HomePage from '../features/feed/pages/HomePage'
@@ -27,20 +28,22 @@ export default function App() {
         <AuthProvider>
           <BrowserRouter>
             <FeedProvider>
-            <Routes>
-              <Route path="/" element={<LandingPage />} />
-              <Route path="/login" element={<AuthPage mode="login" />} />
-              <Route path="/signup" element={<AuthPage mode="signup" />} />
-              <Route element={<RequireAuth />}>
-                <Route path="/home" element={<HomePage />} />
-                <Route path="/profile" element={<ProfilePage />} />
-                <Route path="/connections" element={<ConnectionsPage />} />
-                <Route path="/notifications" element={<NotificationsPage />} />
-                <Route path="/discover" element={<DiscoverPage />} />
-                <Route path="/saved" element={<SavedPage />} />
-              </Route>
-              <Route path="*" element={<LandingPage />} />
-            </Routes>
+              <NotificationProvider>
+                <Routes>
+                  <Route path="/" element={<LandingPage />} />
+                  <Route path="/login" element={<AuthPage mode="login" />} />
+                  <Route path="/signup" element={<AuthPage mode="signup" />} />
+                  <Route element={<RequireAuth />}>
+                    <Route path="/home" element={<HomePage />} />
+                    <Route path="/profile" element={<ProfilePage />} />
+                    <Route path="/connections" element={<ConnectionsPage />} />
+                    <Route path="/notifications" element={<NotificationsPage />} />
+                    <Route path="/discover" element={<DiscoverPage />} />
+                    <Route path="/saved" element={<SavedPage />} />
+                  </Route>
+                  <Route path="*" element={<LandingPage />} />
+                </Routes>
+              </NotificationProvider>
             </FeedProvider>
           </BrowserRouter>
         </AuthProvider>
